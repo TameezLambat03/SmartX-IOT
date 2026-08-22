@@ -1,50 +1,44 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using SmartX.Shared;
+using System.Collections.Generic;
 
-namespace SmartXAPI
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapPost("/api/telemetry/environmental", (TelemetryPacket<float> packet) =>
 {
-    public class Program
+    float[][] rawSensorBatches = new float[3][];
+    rawSensorBatches[0] = new float[] { packet.SensorValue, packet.SensorValue + 0.5f };
+    rawSensorBatches[1] = new float[] { packet.SensorValue - 0.2f };
+    rawSensorBatches[2] = new float[] { packet.SensorValue + 0.1f, packet.SensorValue, packet.SensorValue - 0.1f };
+
+    List<float> optimizedCollection = BatchProcessor.ProcessIncomingBatch(rawSensorBatches);
+
+    return Results.Ok(new
     {
-        public static void Main(string[] args)
+        Message = "Packet received and batched successfully",
+        OptimizedCount = optimizedCollection.Count,
+        MacAddress = packet.DeviceMacAddress
+    });
+});
+
+app.Run();
+
+public static class BatchProcessor
+{
+    public static List<float> ProcessIncomingBatch(float[][] jaggedBatches)
+    {
+        List<float> finalOptimizedList = new List<float>();
+
+        for (int i = 0; i < jaggedBatches.Length; i++)
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
-            builder.Services.AddAuthorization();
-
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
-
-            var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            for (int j = 0; j < jaggedBatches[i].Length; j++)
             {
-                app.MapOpenApi();
+                finalOptimizedList.Add(jaggedBatches[i][j]);
             }
-
-            app.UseHttpsRedirection();
-
-            app.UseAuthorization();
-
-            var summaries = new[]
-            {
-                "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-            };
-
-            app.MapGet("/weatherforecast", (HttpContext httpContext) =>
-            {
-                var forecast = Enumerable.Range(1, 5).Select(index =>
-                    new WeatherForecast
-                    {
-                        Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                        TemperatureC = Random.Shared.Next(-20, 55),
-                        Summary = summaries[Random.Shared.Next(summaries.Length)]
-                    })
-                    .ToArray();
-                return forecast;
-            })
-            .WithName("GetWeatherForecast");
-
-            app.Run();
         }
+
+        return finalOptimizedList;
     }
 }
