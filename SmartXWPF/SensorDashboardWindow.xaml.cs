@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using SmartX.Shared;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -102,6 +103,28 @@ public partial class SensorDashboardWindow : Window
         TelemetryPacket<float> aggregatedMeter = meterA + meterB;
 
         LogTelemetryFeed($"[OPERATOR OVERLOAD +] Aggregated Load: {meterA.SensorValue} + {meterB.SensorValue} = {aggregatedMeter.SensorValue} (ID: {aggregatedMeter.DeviceMacAddress})");
+    }
+
+    private async void BtnFetchTelemetry_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/telemetry/environmental");
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<float>>();
+                int count = data != null ? data.Count : 0;
+                LogTelemetryFeed($"[RETRIEVED] Fetched {count} optimized historical records from gateway API.");
+            }
+            else
+            {
+                LogTelemetryFeed($"[API ERROR] HTTP {response.StatusCode} during retrieval.");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogTelemetryFeed($"[FETCH ERROR] Failed to contact gateway: {ex.Message}");
+        }
     }
 
     private DeploymentNode BuildDeploymentHierarchy(string path)
