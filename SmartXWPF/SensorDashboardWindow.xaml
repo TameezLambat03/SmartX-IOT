@@ -18,7 +18,7 @@
             <TextBox x:Name="TxtDeploymentPath" Height="30" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" Padding="5" Text="Facility A/Zone 1/Sub-Zone B"/>
 
             <TextBlock Text="Sensor Category" Foreground="#CCCCCC" Margin="0,10,0,2"/>
-            <ComboBox x:Name="CmbCategory" Height="30" Background="#2D2D30" Foreground="White" SelectedIndex="0" Margin="0,0,0,10">
+            <ComboBox x:Name="CmbCategory" Height="30" Background="#2D2D30" Foreground="Black" SelectedIndex="0" Margin="0,0,0,10">
                 <ComboBoxItem Content="Environmental (Soil Moisture / Temp)"/>
                 <ComboBoxItem Content="Power Consumption (Smart Meter)"/>
                 <ComboBoxItem Content="Actuator (Valve State)"/>

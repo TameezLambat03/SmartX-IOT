@@ -8,6 +8,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Windows;
 using System.Windows.Media;
+using System.Configuration;
 
 namespace SmartXWPF;
 
@@ -31,7 +32,7 @@ public partial class SensorDashboardWindow : Window
     public SensorDashboardWindow()
     {
         InitializeComponent();
-        _httpClient.BaseAddress = new Uri("http://localhost:5000");
+        _httpClient.BaseAddress = new Uri(ConfigurationManager.AppSettings["ApiBaseUrl"]);
     }
 
     private void BtnAttachFile_Click(object sender, RoutedEventArgs e)
@@ -55,17 +56,10 @@ public partial class SensorDashboardWindow : Window
     {
         string mac = TxtMacAddress.Text.Trim();
         string deploymentRaw = TxtDeploymentPath.Text.Trim();
-
-        if (!float.TryParse(TxtSensorValue.Text.Trim(), out float sensorVal))
-        {
-            MessageBox.Show("Please enter a valid numeric sensor value.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        string rawValue = TxtSensorValue.Text.Trim();
 
         DeploymentNode deploymentTree = BuildDeploymentHierarchy(deploymentRaw);
-        bool isValidPath = ValidateDeploymentRecursively(deploymentTree, 0);
-
-        if (!isValidPath)
+        if (!ValidateDeploymentRecursively(deploymentTree, 0))
         {
             LblStatusIndicator.Text = "STATUS: PATH INVALID";
             LblStatusIndicator.Foreground = new SolidColorBrush(Colors.OrangeRed);
@@ -73,25 +67,55 @@ public partial class SensorDashboardWindow : Window
             return;
         }
 
-        TelemetryPacket<float> packet = new TelemetryPacket<float>(mac, deploymentRaw, sensorVal);
-
-        EvaluateVisualAnomaly(sensorVal);
-
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/telemetry/environmental", packet);
-            if (response.IsSuccessStatusCode)
+            HttpResponseMessage response = null;
+
+            // Switch based on the UI dropdown category
+            if (CmbCategory.SelectedIndex == 0) // Environmental (Float)
             {
-                LogTelemetryFeed($"[INGESTED] MAC: {mac} | Value: {sensorVal} | Hierarchy Validated: {deploymentRaw}");
+                if (!float.TryParse(rawValue, out float floatVal))
+                {
+                    MessageBox.Show("Please enter a valid decimal for Environmental data.", "Format Error");
+                    return;
+                }
+                var packet = new TelemetryPacket<float>(mac, deploymentRaw, floatVal);
+                EvaluateVisualAnomaly(floatVal);
+                response = await _httpClient.PostAsJsonAsync("/api/telemetry/environmental", packet);
+            }
+            else if (CmbCategory.SelectedIndex == 1) // Power Consumption (Int)
+            {
+                if (!int.TryParse(rawValue, out int intVal))
+                {
+                    MessageBox.Show("Please enter a whole number for Power Consumption.", "Format Error");
+                    return;
+                }
+                var packet = new TelemetryPacket<int>(mac, deploymentRaw, intVal);
+                response = await _httpClient.PostAsJsonAsync("/api/telemetry/power", packet);
+            }
+            else if (CmbCategory.SelectedIndex == 2) // Actuator (Bool)
+            {
+                if (!bool.TryParse(rawValue, out bool boolVal))
+                {
+                    MessageBox.Show("Please enter 'true' or 'false' for Actuator data.", "Format Error");
+                    return;
+                }
+                var packet = new TelemetryPacket<bool>(mac, deploymentRaw, boolVal);
+                response = await _httpClient.PostAsJsonAsync("/api/telemetry/actuator", packet);
+            }
+
+            if (response != null && response.IsSuccessStatusCode)
+            {
+                LogTelemetryFeed($"[INGESTED] MAC: {mac} | Value: {rawValue} | Type: {CmbCategory.Text.Split(' ')[0]}");
             }
             else
             {
-                LogTelemetryFeed($"[API ERROR] HTTP {response.StatusCode} received from gateway.");
+                LogTelemetryFeed($"[API ERROR] HTTP {response?.StatusCode} received from gateway.");
             }
         }
         catch (Exception ex)
         {
-            LogTelemetryFeed($"[SIMULATED LOCAL] API offline ({ex.Message}). Processed packet locally: MAC {mac} -> {sensorVal}");
+            LogTelemetryFeed($"[CONNECTION ERROR] Failed to push packet: {ex.Message}");
         }
     }
 
