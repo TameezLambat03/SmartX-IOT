@@ -1,0 +1,16 @@
+﻿<Window x:Class="SmartXWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Smart-X Gateway" Height="450" Width="800" Background="#1E1E1E">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
+            <TextBlock Text="Smart-X Ecosystem" FontSize="28" FontWeight="Bold" Foreground="White" TextAlignment="Center" Margin="0,0,0,30"/>
+
+            <Button x:Name="BtnIngestion" Content="Sensor Data Ingestion and Telemetry" FontSize="16" Height="50" Margin="0,0,0,15" Background="#007ACC" Foreground="White" Click="BtnIngestion_Click"/>
+
+            <Button x:Name="BtnCommandStream" Content="Real-Time Command Stream and History" FontSize="16" Height="50" Margin="0,0,0,15" IsEnabled="False" Opacity="0.5"/>
+
+            <Button x:Name="BtnNetworkTopology" Content="Network Topology and Mesh Routing" FontSize="16" Height="50" Margin="0,0,0,15" IsEnabled="False" Opacity="0.5"/>
+        </StackPanel>
+    </Grid>
+</Window>

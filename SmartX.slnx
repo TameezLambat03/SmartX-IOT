@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SmartX.Shared/SmartX.Shared.csproj" />
+  <Project Path="SmartXAPI/SmartXAPI.csproj" />
+  <Project Path="SmartXWPF/SmartXWPF.csproj" />
+</Solution>
