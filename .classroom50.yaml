@@ -1,0 +1,7 @@
+schema: "classroom50/repo-config/v1"
+classroom: "prog7312-2026"
+assignment: "prog7312-part-1"
+owner:
+  username: "TameezLambat"
+  id: 166487262
+  accepted_at: "2026-08-26T12:32:22Z"
