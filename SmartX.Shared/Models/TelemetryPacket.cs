@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SmartX.Shared;
+namespace SmartX.Shared.Models;
 
 public class TelemetryPacket<T>
 {

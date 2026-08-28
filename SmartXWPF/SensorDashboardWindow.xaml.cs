@@ -1,5 +1,4 @@
 ﻿using Microsoft.Win32;
-using SmartX.Shared;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +8,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Configuration;
+using SmartX.Shared.Models;
 
 namespace SmartXWPF;
 

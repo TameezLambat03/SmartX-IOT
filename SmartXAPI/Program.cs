@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using SmartX.Shared;
+using SmartX.Shared.Models;
 using SmartXAPI.Services;
 using System.Collections.Generic;
 

@@ -1,4 +1,4 @@
-﻿using SmartX.Shared;
+﻿using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
 
