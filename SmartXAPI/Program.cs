@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<TelemetryIngestionService>();
 builder.Services.AddSingleton<DeploymentValidationService>();
+builder.Services.AddSingleton<SensorService>();
 
 var app = builder.Build();
 
