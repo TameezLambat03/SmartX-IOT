@@ -49,14 +49,7 @@ public partial class SensorDashboardWindow : Window
         string deploymentRaw = TxtDeploymentPath.Text.Trim();
         string rawValue = TxtSensorValue.Text.Trim();
 
-        DeploymentNode deploymentTree = BuildDeploymentHierarchy(deploymentRaw);
-        if (!ValidateDeploymentRecursively(deploymentTree, 0))
-        {
-            LblStatusIndicator.Text = "STATUS: PATH INVALID";
-            LblStatusIndicator.Foreground = new SolidColorBrush(Colors.OrangeRed);
-            LogTelemetryFeed($"[REJECTED] Recursive validation failed for hierarchy: {deploymentRaw}");
-            return;
-        }
+
 
         try
         {
@@ -142,38 +135,7 @@ public partial class SensorDashboardWindow : Window
         }
     }
 
-    private DeploymentNode BuildDeploymentHierarchy(string path)
-    {
-        string[] segments = path.Split(new[] { '/', '\\', '>' }, StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length == 0) return new DeploymentNode("Root");
-
-        DeploymentNode root = new DeploymentNode(segments[0].Trim());
-        DeploymentNode current = root;
-
-        for (int i = 1; i < segments.Length; i++)
-        {
-            var nextNode = new DeploymentNode(segments[i].Trim());
-            current.Child = nextNode;
-            current = nextNode;
-        }
-
-        return root;
-    }
-
-    private bool ValidateDeploymentRecursively(DeploymentNode? node, int depth)
-    {
-        if (node == null)
-        {
-            return depth >= 2;
-        }
-
-        if (string.IsNullOrWhiteSpace(node.Name))
-        {
-            return false;
-        }
-
-        return ValidateDeploymentRecursively(node.Child, depth + 1);
-    }
+    
 
     private void EvaluateVisualAnomaly(float value)
     {

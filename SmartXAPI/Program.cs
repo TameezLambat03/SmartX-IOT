@@ -1,27 +1,48 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
+
 using SmartX.Shared.Models;
 using SmartXAPI.Services;
-using System.Collections.Generic;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<TelemetryIngestionService>();
+builder.Services.AddSingleton<DeploymentValidationService>();
 
 var app = builder.Build();
 
-app.MapPost("/api/telemetry/environmental", (TelemetryPacket<float> packet, TelemetryIngestionService ingestionService) =>
-{
-    ingestionService.IngestPacket(packet);
-
-    return Results.Ok(new
+app.MapPost(
+    "/api/telemetry/environmental",
+    (
+        TelemetryPacket<float> packet,
+        TelemetryIngestionService ingestionService,
+        DeploymentValidationService validationService
+    ) =>
     {
-        Message = "Packet successfully ingested into processing pipeline.",
-        OptimizedCount = ingestionService.GetTotalOptimizedRecords(),
-        MacAddress = packet.DeviceMacAddress
+        DeploymentNode deploymentTree =
+            validationService.BuildDeploymentHierarchy(
+                packet.DeploymentLocation);
+
+        bool isValid =
+            validationService.ValidateDeploymentRecursively(
+                deploymentTree);
+
+        if (!isValid)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "Invalid deployment hierarchy."
+            });
+        }
+
+        ingestionService.IngestPacket(packet);
+
+        return Results.Ok(new
+        {
+            Message = "Packet successfully ingested into processing pipeline.",
+            OptimizedCount =
+                ingestionService.GetTotalOptimizedRecords(),
+            MacAddress = packet.DeviceMacAddress
+        });
     });
-});
 
 
 app.MapGet("/api/telemetry/environmental", (TelemetryIngestionService ingestionService) =>
