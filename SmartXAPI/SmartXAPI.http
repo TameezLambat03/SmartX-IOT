@@ -1,6 +1,34 @@
-@SmartXAPI_HostAddress = http://localhost:5198
+# @SmartXAPI_HostAddress = http://localhost:5198
 
-GET {{SmartXAPI_HostAddress}}/weatherforecast/
+# GET {{SmartXAPI_HostAddress}}/weatherforecast/
+# Accept: application/json
+
+# ###
+@SmartXAPI_HostAddress = http://localhost:5198
+### Register a sensor
+POST http://localhost:5198/api/sensors
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "category": 0
+}
+
+### Get registered sensors
+GET {{SmartXAPI_HostAddress}}/api/sensors
 Accept: application/json
 
-###
+### Send environmental telemetry
+POST {{SmartXAPI_HostAddress}}/api/telemetry/environmental
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 45.5
+}
+
+### Get environmental telemetry
+GET {{SmartXAPI_HostAddress}}/api/telemetry/environmental
+Accept: application/json
