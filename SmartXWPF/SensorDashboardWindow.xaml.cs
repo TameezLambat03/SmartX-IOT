@@ -10,19 +10,10 @@ using System.Windows.Media;
 using System.Configuration;
 using SmartX.Shared.Models;
 
+
 namespace SmartXWPF;
 
-public class DeploymentNode
-{
-    public string Name { get; set; }
-    public DeploymentNode? Child { get; set; }
 
-    public DeploymentNode(string name, DeploymentNode? child = null)
-    {
-        Name = name;
-        Child = child;
-    }
-}
 
 public partial class SensorDashboardWindow : Window
 {
