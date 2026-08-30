@@ -106,18 +106,34 @@ public class TelemetryIngestionService
 
     private void ProcessPowerBuffer()
     {
+        int[] completedBatch =
+            _currentPowerBuffer.ToArray();
+
+        // Store the completed batch in the historical jagged array
+        if (_powerBatchIndex <
+            _historicalPowerBatches.Length)
+        {
+            _historicalPowerBatches[_powerBatchIndex] =
+                completedBatch;
+
+            _powerBatchIndex++;
+        }
+
+        // Move the completed batch into the optimized collection
+        for (int i = 0; i < completedBatch.Length; i++)
+        {
+            _optimizedPowerData.Add(completedBatch[i]);
+        }
+
+        // Clear the temporary buffer for the next batch
+        _currentPowerBuffer.Clear();
+
+        // Reset the historical index when the array is full
         if (_powerBatchIndex >=
             _historicalPowerBatches.Length)
         {
-            FlushPowerBatches();
+            _powerBatchIndex = 0;
         }
-
-        _historicalPowerBatches[_powerBatchIndex] =
-            _currentPowerBuffer.ToArray();
-
-        _powerBatchIndex++;
-
-        _currentPowerBuffer.Clear();
     }
 
     private void FlushPowerBatches()

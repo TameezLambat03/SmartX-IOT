@@ -75,3 +75,52 @@ Content-Type: application/json
 ### Get environmental telemetry
 GET http://localhost:5198/api/telemetry/environmental
 Accept: application/json
+
+### Send power telemetry
+POST http://localhost:5198/api/telemetry/power
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:C1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 1250
+}
+### Power 2
+POST http://localhost:5198/api/telemetry/power
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:C1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 1300
+}
+
+### Power 3
+POST http://localhost:5198/api/telemetry/power
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:C1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 1275
+}
+
+### Power 4
+POST http://localhost:5198/api/telemetry/power
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:C1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 1290
+}
+
+### Power 5
+POST http://localhost:5198/api/telemetry/power
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:C1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 1310
+}
