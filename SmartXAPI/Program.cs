@@ -53,9 +53,19 @@ app.MapPost(
     });
 
 
+
 app.MapGet("/api/telemetry/environmental", (TelemetryIngestionService ingestionService) =>
 {
     return Results.Ok(ingestionService.GetEnvironmentalData());
+});
+
+app.MapGet("/api/telemetry/power", (TelemetryIngestionService ingestionService) =>
+{
+    return Results.Ok(ingestionService.GetPowerData());
+});
+app.MapGet("/api/telemetry/actuator", (TelemetryIngestionService ingestionService) =>
+{
+    return Results.Ok(ingestionService.GetActuatorData());
 });
 app.MapPost(
     "/api/telemetry/power",

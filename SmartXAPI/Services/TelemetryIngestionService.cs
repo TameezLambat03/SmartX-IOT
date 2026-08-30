@@ -73,21 +73,7 @@ public class TelemetryIngestionService
         }
     }
 
-    private void FlushEnvironmentalBatches()
-    {
-        for (int i = 0; i < _environmentalBatchIndex; i++)
-        {
-            for (int j = 0;
-                 j < _historicalEnvironmentalBatches[i].Length;
-                 j++)
-            {
-                _optimizedEnvironmentalData.Add(
-                    _historicalEnvironmentalBatches[i][j]);
-            }
-        }
-
-        _environmentalBatchIndex = 0;
-    }
+   
 
 
     // ============================
@@ -136,21 +122,7 @@ public class TelemetryIngestionService
         }
     }
 
-    private void FlushPowerBatches()
-    {
-        for (int i = 0; i < _powerBatchIndex; i++)
-        {
-            for (int j = 0;
-                 j < _historicalPowerBatches[i].Length;
-                 j++)
-            {
-                _optimizedPowerData.Add(
-                    _historicalPowerBatches[i][j]);
-            }
-        }
 
-        _powerBatchIndex = 0;
-    }
 
 
     // ============================
@@ -169,35 +141,37 @@ public class TelemetryIngestionService
 
     private void ProcessActuatorBuffer()
     {
+        bool[] completedBatch =
+            _currentActuatorBuffer.ToArray();
+
+        // Store the completed batch in the historical jagged array
+        if (_actuatorBatchIndex <
+            _historicalActuatorBatches.Length)
+        {
+            _historicalActuatorBatches[_actuatorBatchIndex] =
+                completedBatch;
+
+            _actuatorBatchIndex++;
+        }
+
+        // Move the completed batch into the optimized collection
+        for (int i = 0; i < completedBatch.Length; i++)
+        {
+            _optimizedActuatorData.Add(completedBatch[i]);
+        }
+
+        // Clear the temporary buffer for the next batch
+        _currentActuatorBuffer.Clear();
+
+        // Reset the historical index when the array is full
         if (_actuatorBatchIndex >=
             _historicalActuatorBatches.Length)
         {
-            FlushActuatorBatches();
+            _actuatorBatchIndex = 0;
         }
-
-        _historicalActuatorBatches[_actuatorBatchIndex] =
-            _currentActuatorBuffer.ToArray();
-
-        _actuatorBatchIndex++;
-
-        _currentActuatorBuffer.Clear();
     }
 
-    private void FlushActuatorBatches()
-    {
-        for (int i = 0; i < _actuatorBatchIndex; i++)
-        {
-            for (int j = 0;
-                 j < _historicalActuatorBatches[i].Length;
-                 j++)
-            {
-                _optimizedActuatorData.Add(
-                    _historicalActuatorBatches[i][j]);
-            }
-        }
-
-        _actuatorBatchIndex = 0;
-    }
+    
 
 
     // ============================

@@ -124,3 +124,25 @@ Content-Type: application/json
   "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
   "sensorValue": 1310
 }
+###
+
+GET http://localhost:5198/api/telemetry/power
+Accept: application/json
+
+###Send actuator telemetry
+   
+POST http://localhost:5198/api/telemetry/actuator
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:D1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": true
+}
+
+
+### Get actuator telemetry
+GET http://localhost:5198/api/telemetry/actuator
+Accept: application/json
+
+
