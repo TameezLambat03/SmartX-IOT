@@ -23,10 +23,50 @@ public partial class SensorDashboardWindow : Window
     private readonly HttpClient _httpClient = new HttpClient();
     private string _attachedFilePath = string.Empty;
 
+
+
+
     public SensorDashboardWindow()
     {
         InitializeComponent();
-        _httpClient.BaseAddress = new Uri(ConfigurationManager.AppSettings["ApiBaseUrl"]);
+
+        _httpClient.BaseAddress =
+            new Uri(ConfigurationManager.AppSettings["ApiBaseUrl"]);
+
+        Loaded += async (sender, e) =>
+        {
+            await LoadRegisteredSensorCount();
+        };
+    }
+    private async Task LoadRegisteredSensorCount()
+    {
+        try
+        {
+            var response =
+                await _httpClient.GetAsync("/api/sensors");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var sensors =
+                    await response.Content
+                        .ReadFromJsonAsync<List<SensorProfile>>();
+
+                int count = sensors?.Count ?? 0;
+                MessageBox.Show(
+    $"API returned {count} sensor(s).",
+    "Smart-X Diagnostic");
+
+                LblDeviceCount.Text = count.ToString();
+
+                LogTelemetryFeed(
+                    $"[SYSTEM] Loaded {count} registered sensor profile(s).");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogTelemetryFeed(
+                $"[SYSTEM WARNING] Could not load registered sensors: {ex.Message}");
+        }
     }
 
     private void BtnAttachFile_Click(object sender, RoutedEventArgs e)
@@ -116,8 +156,7 @@ public partial class SensorDashboardWindow : Window
                     $"[REGISTERED] Sensor {mac} | {category} | {deployment}");
 
                 LblSystemStatus.Text = "NORMAL";
-                LblDeviceCount.Text =
-                    (int.Parse(LblDeviceCount.Text) + 1).ToString();
+                await LoadRegisteredSensorCount(); 
 
                 MessageBox.Show(
                     "Sensor successfully registered.",

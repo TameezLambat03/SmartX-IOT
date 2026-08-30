@@ -116,5 +116,7 @@ app.MapGet(
     {
         return Results.Ok(sensorService.GetAllSensors());
     });
+
+
 app.Run();
 

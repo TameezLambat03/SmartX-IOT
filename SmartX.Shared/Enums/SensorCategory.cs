@@ -1,7 +1,8 @@
-﻿
+﻿using System.Text.Json.Serialization;
 
 namespace SmartX.Shared.Enums;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SensorCategory
 {
     Environmental,
