@@ -20,15 +20,58 @@ GET {{SmartXAPI_HostAddress}}/api/sensors
 Accept: application/json
 
 ### Send environmental telemetry
-POST {{SmartXAPI_HostAddress}}/api/telemetry/environmental
+POST http://localhost:5198/api/telemetry/environmental
+Content-Type: application/json
+
+### Environmental 1
+POST http://localhost:5198/api/telemetry/environmental
 Content-Type: application/json
 
 {
   "deviceMacAddress": "00:1B:44:11:3A:B7",
   "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
-  "sensorValue": 45.5
+  "sensorValue": 46.6
 }
 
+### Environmental 2
+POST http://localhost:5198/api/telemetry/environmental
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 47.2
+}
+
+### Environmental 3
+POST http://localhost:5198/api/telemetry/environmental
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 48.1
+}
+
+### Environmental 4
+POST http://localhost:5198/api/telemetry/environmental
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 46.9
+}
+
+### Environmental 5
+POST http://localhost:5198/api/telemetry/environmental
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": 47.5
+}
 ### Get environmental telemetry
-GET {{SmartXAPI_HostAddress}}/api/telemetry/environmental
+GET http://localhost:5198/api/telemetry/environmental
 Accept: application/json

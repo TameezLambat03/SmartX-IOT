@@ -47,7 +47,7 @@ app.MapPost(
         {
             Message = "Packet successfully ingested into processing pipeline.",
             OptimizedCount =
-                ingestionService.GetTotalOptimizedRecords(),
+                ingestionService.GetTotalOptimizedEnvironmentalRecords(),
             MacAddress = packet.DeviceMacAddress
         });
     });
@@ -55,19 +55,44 @@ app.MapPost(
 
 app.MapGet("/api/telemetry/environmental", (TelemetryIngestionService ingestionService) =>
 {
-    return Results.Ok(ingestionService.GetOptimizedData());
+    return Results.Ok(ingestionService.GetEnvironmentalData());
 });
-app.MapPost("/api/telemetry/power", (TelemetryPacket<int> packet) =>
-{
-    // Simulating integer processing
-    return Results.Ok(new { Message = "Power load packet ingested.", MacAddress = packet.DeviceMacAddress });
-});
+app.MapPost(
+    "/api/telemetry/power",
+    (
+        TelemetryPacket<int> packet,
+        TelemetryIngestionService ingestionService
+    ) =>
+    {
+        ingestionService.IngestPacket(packet);
 
-app.MapPost("/api/telemetry/actuator", (TelemetryPacket<bool> packet) =>
-{
-    // Simulating boolean switch processing
-    return Results.Ok(new { Message = "Actuator state packet ingested.", MacAddress = packet.DeviceMacAddress });
-});
+        return Results.Ok(new
+        {
+            Message = "Power load packet successfully ingested.",
+            OptimizedCount =
+                ingestionService.GetTotalOptimizedPowerRecords(),
+            MacAddress = packet.DeviceMacAddress
+        });
+    });
+
+
+app.MapPost(
+    "/api/telemetry/actuator",
+    (
+        TelemetryPacket<bool> packet,
+        TelemetryIngestionService ingestionService
+    ) =>
+    {
+        ingestionService.IngestPacket(packet);
+
+        return Results.Ok(new
+        {
+            Message = "Actuator state packet successfully ingested.",
+            OptimizedCount =
+                ingestionService.GetTotalOptimizedActuatorRecords(),
+            MacAddress = packet.DeviceMacAddress
+        });
+    });
 
 app.MapPost(
     "/api/sensors",

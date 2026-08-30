@@ -7,56 +7,215 @@ namespace SmartXAPI.Services;
 public class TelemetryIngestionService
 {
     private readonly int _batchSize = 5;
-    private List<float> _currentBuffer = new List<float>();
 
-    private float[][] _historicalBatches = new float[10][];
-    private int _batchIndex = 0;
+    // Environmental telemetry
+    private readonly List<float> _currentEnvironmentalBuffer = new();
+    private readonly float[][] _historicalEnvironmentalBatches = new float[10][];
+    private int _environmentalBatchIndex = 0;
+    private readonly List<float> _optimizedEnvironmentalData = new();
 
-    private List<float> _optimizedDataStore = new List<float>();
+    // Power telemetry
+    private readonly List<int> _currentPowerBuffer = new();
+    private readonly int[][] _historicalPowerBatches = new int[10][];
+    private int _powerBatchIndex = 0;
+    private readonly List<int> _optimizedPowerData = new();
+
+    // Actuator telemetry
+    private readonly List<bool> _currentActuatorBuffer = new();
+    private readonly bool[][] _historicalActuatorBatches = new bool[10][];
+    private int _actuatorBatchIndex = 0;
+    private readonly List<bool> _optimizedActuatorData = new();
+
+
+    // ============================
+    // ENVIRONMENTAL TELEMETRY
+    // ============================
 
     public void IngestPacket(TelemetryPacket<float> packet)
     {
-        _currentBuffer.Add(packet.SensorValue);
+        _currentEnvironmentalBuffer.Add(packet.SensorValue);
 
-        if (_currentBuffer.Count >= _batchSize)
+        if (_currentEnvironmentalBuffer.Count >= _batchSize)
         {
-            ProcessBufferIntoBatch();
+            ProcessEnvironmentalBuffer();
         }
     }
 
-    private void ProcessBufferIntoBatch()
+    private void ProcessEnvironmentalBuffer()
     {
-        if (_batchIndex >= _historicalBatches.Length)
+        float[] completedBatch =
+            _currentEnvironmentalBuffer.ToArray();
+
+        // Store the completed batch in the historical jagged array
+        if (_environmentalBatchIndex <
+            _historicalEnvironmentalBatches.Length)
         {
-            FlushBatchesToOptimizedStore();
+            _historicalEnvironmentalBatches[_environmentalBatchIndex] =
+                completedBatch;
+
+            _environmentalBatchIndex++;
         }
 
-        _historicalBatches[_batchIndex] = _currentBuffer.ToArray();
-        _batchIndex++;
+        // Move the completed batch into the optimized collection
+        for (int i = 0; i < completedBatch.Length; i++)
+        {
+            _optimizedEnvironmentalData.Add(completedBatch[i]);
+        }
 
-        _currentBuffer.Clear();
+        // Clear the temporary buffer for the next batch
+        _currentEnvironmentalBuffer.Clear();
+
+        // If the historical array is full, reset its index
+        if (_environmentalBatchIndex >=
+            _historicalEnvironmentalBatches.Length)
+        {
+            _environmentalBatchIndex = 0;
+        }
     }
 
-    private void FlushBatchesToOptimizedStore()
+    private void FlushEnvironmentalBatches()
     {
-        for (int i = 0; i < _batchIndex; i++)
+        for (int i = 0; i < _environmentalBatchIndex; i++)
         {
-            for (int j = 0; j < _historicalBatches[i].Length; j++)
+            for (int j = 0;
+                 j < _historicalEnvironmentalBatches[i].Length;
+                 j++)
             {
-                _optimizedDataStore.Add(_historicalBatches[i][j]);
+                _optimizedEnvironmentalData.Add(
+                    _historicalEnvironmentalBatches[i][j]);
             }
         }
 
-        _batchIndex = 0;
+        _environmentalBatchIndex = 0;
     }
 
-    public int GetTotalOptimizedRecords()
+
+    // ============================
+    // POWER TELEMETRY
+    // ============================
+
+    public void IngestPacket(TelemetryPacket<int> packet)
     {
-        return _optimizedDataStore.Count;
+        _currentPowerBuffer.Add(packet.SensorValue);
+
+        if (_currentPowerBuffer.Count >= _batchSize)
+        {
+            ProcessPowerBuffer();
+        }
     }
 
-    public List<float> GetOptimizedData()
+    private void ProcessPowerBuffer()
     {
-        return _optimizedDataStore;
+        if (_powerBatchIndex >=
+            _historicalPowerBatches.Length)
+        {
+            FlushPowerBatches();
+        }
+
+        _historicalPowerBatches[_powerBatchIndex] =
+            _currentPowerBuffer.ToArray();
+
+        _powerBatchIndex++;
+
+        _currentPowerBuffer.Clear();
+    }
+
+    private void FlushPowerBatches()
+    {
+        for (int i = 0; i < _powerBatchIndex; i++)
+        {
+            for (int j = 0;
+                 j < _historicalPowerBatches[i].Length;
+                 j++)
+            {
+                _optimizedPowerData.Add(
+                    _historicalPowerBatches[i][j]);
+            }
+        }
+
+        _powerBatchIndex = 0;
+    }
+
+
+    // ============================
+    // ACTUATOR TELEMETRY
+    // ============================
+
+    public void IngestPacket(TelemetryPacket<bool> packet)
+    {
+        _currentActuatorBuffer.Add(packet.SensorValue);
+
+        if (_currentActuatorBuffer.Count >= _batchSize)
+        {
+            ProcessActuatorBuffer();
+        }
+    }
+
+    private void ProcessActuatorBuffer()
+    {
+        if (_actuatorBatchIndex >=
+            _historicalActuatorBatches.Length)
+        {
+            FlushActuatorBatches();
+        }
+
+        _historicalActuatorBatches[_actuatorBatchIndex] =
+            _currentActuatorBuffer.ToArray();
+
+        _actuatorBatchIndex++;
+
+        _currentActuatorBuffer.Clear();
+    }
+
+    private void FlushActuatorBatches()
+    {
+        for (int i = 0; i < _actuatorBatchIndex; i++)
+        {
+            for (int j = 0;
+                 j < _historicalActuatorBatches[i].Length;
+                 j++)
+            {
+                _optimizedActuatorData.Add(
+                    _historicalActuatorBatches[i][j]);
+            }
+        }
+
+        _actuatorBatchIndex = 0;
+    }
+
+
+    // ============================
+    // RETRIEVAL
+    // ============================
+
+    public int GetTotalOptimizedEnvironmentalRecords()
+    {
+        return _optimizedEnvironmentalData.Count;
+    }
+
+    public int GetTotalOptimizedPowerRecords()
+    {
+        return _optimizedPowerData.Count;
+    }
+
+    public int GetTotalOptimizedActuatorRecords()
+    {
+        return _optimizedActuatorData.Count;
+    }
+
+
+    public List<float> GetEnvironmentalData()
+    {
+        return _optimizedEnvironmentalData;
+    }
+
+    public List<int> GetPowerData()
+    {
+        return _optimizedPowerData;
+    }
+
+    public List<bool> GetActuatorData()
+    {
+        return _optimizedActuatorData;
     }
 }
