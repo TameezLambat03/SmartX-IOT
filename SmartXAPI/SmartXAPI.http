@@ -10,7 +10,7 @@ POST http://localhost:5198/api/sensors
 Content-Type: application/json
 
 {
-  "deviceMacAddress": "00:1B:44:11:3A:B7",
+  "deviceMacAddress": "00:1B:44:11:3A:B8",
   "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
   "category": 0
 }

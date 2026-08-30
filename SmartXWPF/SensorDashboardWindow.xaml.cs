@@ -1,15 +1,18 @@
 ﻿using Microsoft.Win32;
+using SmartX.Shared.Enums;
+
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Windows;
 using System.Windows.Media;
-using System.Configuration;
-using SmartX.Shared.Models;
 
+using SmartX.Shared;
+using SmartX.Shared.Models;
 
 namespace SmartXWPF;
 
@@ -40,6 +43,122 @@ public partial class SensorDashboardWindow : Window
             LblAttachedFile.Text = $"Attached: {Path.GetFileName(_attachedFilePath)} ({new FileInfo(_attachedFilePath).Length / 1024} KB)";
             LblAttachedFile.Foreground = new SolidColorBrush(Colors.LightGreen);
             LogTelemetryFeed($"Attached profile artifact: {Path.GetFileName(_attachedFilePath)}");
+        }
+    }
+    private async void BtnRegisterSensor_Click(object sender, RoutedEventArgs e)
+    {
+        string mac = TxtMacAddress.Text.Trim();
+        string deployment = TxtDeploymentPath.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(mac))
+        {
+            MessageBox.Show(
+                "Please enter a device MAC address.",
+                "Sensor Registration",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(deployment))
+        {
+            MessageBox.Show(
+                "Please enter a deployment hierarchy.",
+                "Sensor Registration",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        try
+        {
+            SensorCategory category;
+
+            switch (CmbCategory.SelectedIndex)
+            {
+                case 0:
+                    category = SensorCategory.Environmental;
+                    break;
+
+                case 1:
+                    category = SensorCategory.PowerConsumption;
+                    break;
+
+                case 2:
+                    category = SensorCategory.Actuator;
+                    break;
+
+                default:
+                    MessageBox.Show(
+                        "Please select a sensor category.",
+                        "Sensor Registration",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+            }
+
+            var sensor = new SensorProfile(
+                mac,
+                deployment,
+                category);
+
+            HttpResponseMessage response =
+                await _httpClient.PostAsJsonAsync(
+                    "/api/sensors",
+                    sensor);
+
+            if (response.IsSuccessStatusCode)
+            {
+                LogTelemetryFeed(
+                    $"[REGISTERED] Sensor {mac} | {category} | {deployment}");
+
+                LblSystemStatus.Text = "NORMAL";
+                LblDeviceCount.Text =
+                    (int.Parse(LblDeviceCount.Text) + 1).ToString();
+
+                MessageBox.Show(
+                    "Sensor successfully registered.",
+                    "Smart-X",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            else if (response.StatusCode ==
+                     System.Net.HttpStatusCode.Conflict)
+            {
+                LogTelemetryFeed(
+                    $"[REGISTRATION REJECTED] Duplicate MAC address: {mac}");
+
+                MessageBox.Show(
+                    "A sensor with this MAC address is already registered.",
+                    "Registration Conflict",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            else
+            {
+                LogTelemetryFeed(
+                    $"[REGISTRATION ERROR] HTTP {response.StatusCode}");
+
+                MessageBox.Show(
+                    $"The API rejected the registration.\nHTTP Status: {response.StatusCode}",
+                    "Registration Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogTelemetryFeed(
+                $"[CONNECTION ERROR] Sensor registration failed: {ex.Message}");
+
+            MessageBox.Show(
+                $"Could not connect to the Smart-X API.\n\n{ex.Message}",
+                "Connection Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
