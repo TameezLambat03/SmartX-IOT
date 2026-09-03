@@ -52,9 +52,7 @@ public partial class SensorDashboardWindow : Window
                         .ReadFromJsonAsync<List<SensorProfile>>();
 
                 int count = sensors?.Count ?? 0;
-                MessageBox.Show(
-    $"API returned {count} sensor(s).",
-    "Smart-X Diagnostic");
+                
 
                 LblDeviceCount.Text = count.ToString();
 

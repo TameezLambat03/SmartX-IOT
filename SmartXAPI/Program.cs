@@ -15,7 +15,9 @@ builder.Services.AddSingleton<TelemetryIngestionService>();
 builder.Services.AddSingleton<DeploymentValidationService>();
 builder.Services.AddSingleton<SensorService>();
 
+
 var app = builder.Build();
+
 
 app.MapPost(
     "/api/telemetry/environmental",
@@ -212,7 +214,8 @@ app.MapPost(
             FilePath = savedFilePath,
             Sensor = sensor
         });
-    });
+    })
+    .DisableAntiforgery();
 
 app.Run();
 
