@@ -69,20 +69,103 @@ public partial class SensorDashboardWindow : Window
         }
     }
 
-    private void BtnAttachFile_Click(object sender, RoutedEventArgs e)
+    private async void BtnAttachFile_Click(object sender, RoutedEventArgs e)
     {
+        string mac = TxtMacAddress.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(mac))
+        {
+            MessageBox.Show(
+                "Please enter and register a sensor before attaching a file.",
+                "Sensor Attachment",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
         OpenFileDialog openFileDialog = new OpenFileDialog
         {
             Filter = "Config & Log Files (*.json;*.txt;*.log;*.png;*.jpg)|*.json;*.txt;*.log;*.png;*.jpg|All Files (*.*)|*.*",
             Title = "Select Sensor Profile Attachment"
         };
 
-        if (openFileDialog.ShowDialog() == true)
+        if (openFileDialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
         {
             _attachedFilePath = openFileDialog.FileName;
-            LblAttachedFile.Text = $"Attached: {System.IO.Path.GetFileName(_attachedFilePath)} ({new FileInfo(_attachedFilePath).Length / 1024} KB)";
-            LblAttachedFile.Foreground = new SolidColorBrush(Colors.LightGreen);
-            LogTelemetryFeed($"Attached profile artifact: {System.IO.Path.GetFileName(_attachedFilePath)}");
+
+            using MultipartFormDataContent form =
+                new MultipartFormDataContent();
+
+            using FileStream fileStream =
+                File.OpenRead(_attachedFilePath);
+
+            using StreamContent fileContent =
+                new StreamContent(fileStream);
+
+            form.Add(
+                fileContent,
+                "file",
+                System.IO.Path.GetFileName(_attachedFilePath));
+
+            HttpResponseMessage response =
+                await _httpClient.PostAsync(
+                    $"/api/sensors/{Uri.EscapeDataString(mac)}/attachment",
+                    form);
+
+            if (response.IsSuccessStatusCode)
+            {
+                string fileName =
+                    System.IO.Path.GetFileName(_attachedFilePath);
+
+                long fileSizeKb =
+                    new FileInfo(_attachedFilePath).Length / 1024;
+
+                LblAttachedFile.Text =
+                    $"Attached: {fileName} ({fileSizeKb} KB)";
+
+                LblAttachedFile.Foreground =
+                    new SolidColorBrush(Colors.LightGreen);
+
+                LogTelemetryFeed(
+                    $"[ATTACHMENT UPLOADED] {fileName} → Sensor {mac}");
+
+                MessageBox.Show(
+                    "File successfully attached to the sensor profile.",
+                    "Smart-X",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            else
+            {
+                string errorMessage =
+                    await response.Content.ReadAsStringAsync();
+
+                LogTelemetryFeed(
+                    $"[ATTACHMENT ERROR] HTTP {response.StatusCode}");
+
+                MessageBox.Show(
+                    $"The API rejected the attachment.\n\nHTTP Status: {response.StatusCode}\n{errorMessage}",
+                    "Attachment Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogTelemetryFeed(
+                $"[ATTACHMENT ERROR] {ex.Message}");
+
+            MessageBox.Show(
+                $"Could not upload the attachment.\n\n{ex.Message}",
+                "Attachment Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
     private async void BtnRegisterSensor_Click(object sender, RoutedEventArgs e)
