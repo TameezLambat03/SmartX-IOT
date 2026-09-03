@@ -430,26 +430,125 @@
                     </Grid>
 
 
-                    <!-- Telemetry feed -->
-                    <Border Grid.Row="1"
-                            Background="#0E1316"
-                            BorderBrush="#263139"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            Padding="12">
+                    <!-- Telemetry visualization and feed -->
+                    <Grid Grid.Row="1">
 
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="150"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                            <TextBlock x:Name="TxtTelemetryFeed"
-                                       Foreground="#8FF0C8"
-                                       FontFamily="Consolas"
-                                       FontSize="11"
-                                       TextWrapping="Wrap"
-                                       Text="Gateway online.&#x0a;Telemetry ingestion pipeline ready.&#x0a;Waiting for sensor data...&#x0a;"/>
+                        <!-- Current reading summary -->
+                        <Border Grid.Row="0"
+            Background="#11171B"
+            BorderBrush="#2B363D"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="12"
+            Margin="0,0,0,10">
 
-                        </ScrollViewer>
+                            <Grid>
 
-                    </Border>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+
+                                    <TextBlock Text="CURRENT TELEMETRY"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="9"
+                           FontWeight="Bold"/>
+
+                                    <TextBlock x:Name="LblCurrentReading"
+                           Text="--"
+                           Foreground="{StaticResource TextBrush}"
+                           FontSize="26"
+                           FontWeight="Bold"
+                           Margin="0,3,0,0"/>
+
+                                    <TextBlock x:Name="LblReadingCategory"
+                           Text="Waiting for telemetry..."
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="10"/>
+
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1"
+                        HorizontalAlignment="Right">
+
+                                    <TextBlock Text="LAST UPDATE"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="9"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Right"/>
+
+                                    <TextBlock x:Name="LblLastUpdate"
+                           Text="--:--:--"
+                           Foreground="{StaticResource AccentBrush}"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Right"
+                           Margin="0,5,0,0"/>
+
+                                </StackPanel>
+
+                            </Grid>
+
+                        </Border>
+
+
+                        <!-- Visual telemetry trend -->
+                        <Border Grid.Row="1"
+            Background="#0E1316"
+            BorderBrush="#263139"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="10"
+            Margin="0,0,0,10">
+
+                            <Grid>
+
+                                <TextBlock Text="TELEMETRY TREND"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       FontSize="9"
+                       FontWeight="Bold"
+                       VerticalAlignment="Top"/>
+
+                                <Canvas x:Name="TelemetryChartCanvas"
+                    Margin="0,20,0,0"
+                    Background="#11171B"
+                    ClipToBounds="True"/>
+
+                            </Grid>
+
+                        </Border>
+
+
+                        <!-- Existing telemetry feed -->
+                        <Border Grid.Row="2"
+            Background="#0E1316"
+            BorderBrush="#263139"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="12">
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+
+                                <TextBlock x:Name="TxtTelemetryFeed"
+                       Foreground="#8FF0C8"
+                       FontFamily="Consolas"
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       Text="Gateway online.&#x0a;Telemetry ingestion pipeline ready.&#x0a;Waiting for sensor data...&#x0a;"/>
+
+                            </ScrollViewer>
+
+                        </Border>
+
+                    </Grid>
 
 
                     <!-- Status / anomaly panel -->

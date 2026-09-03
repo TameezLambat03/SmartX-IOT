@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
+using SmartX.Shared;
 using SmartX.Shared.Enums;
-
+using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -9,10 +10,9 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
-
-using SmartX.Shared;
-using SmartX.Shared.Models;
+using System.Windows.Shapes;
 
 namespace SmartXWPF;
 
@@ -80,9 +80,9 @@ public partial class SensorDashboardWindow : Window
         if (openFileDialog.ShowDialog() == true)
         {
             _attachedFilePath = openFileDialog.FileName;
-            LblAttachedFile.Text = $"Attached: {Path.GetFileName(_attachedFilePath)} ({new FileInfo(_attachedFilePath).Length / 1024} KB)";
+            LblAttachedFile.Text = $"Attached: {System.IO.Path.GetFileName(_attachedFilePath)} ({new FileInfo(_attachedFilePath).Length / 1024} KB)";
             LblAttachedFile.Foreground = new SolidColorBrush(Colors.LightGreen);
-            LogTelemetryFeed($"Attached profile artifact: {Path.GetFileName(_attachedFilePath)}");
+            LogTelemetryFeed($"Attached profile artifact: {System.IO.Path.GetFileName(_attachedFilePath)}");
         }
     }
     private async void BtnRegisterSensor_Click(object sender, RoutedEventArgs e)
@@ -207,60 +207,184 @@ public partial class SensorDashboardWindow : Window
         string deploymentRaw = TxtDeploymentPath.Text.Trim();
         string rawValue = TxtSensorValue.Text.Trim();
 
-
-
         try
         {
             HttpResponseMessage response = null;
 
-            // Switch based on the UI dropdown category
-            if (CmbCategory.SelectedIndex == 0) // Environmental (Float)
+            // Environmental telemetry (float)
+            if (CmbCategory.SelectedIndex == 0)
             {
                 if (!float.TryParse(rawValue, out float floatVal))
                 {
-                    MessageBox.Show("Please enter a valid decimal for Environmental data.", "Format Error");
+                    MessageBox.Show(
+                        "Please enter a valid decimal for Environmental data.",
+                        "Format Error");
                     return;
                 }
-                var packet = new TelemetryPacket<float>(mac, deploymentRaw, floatVal);
+
+                var packet =
+                    new TelemetryPacket<float>(
+                        mac,
+                        deploymentRaw,
+                        floatVal);
+
                 EvaluateVisualAnomaly(floatVal);
-                response = await _httpClient.PostAsJsonAsync("/api/telemetry/environmental", packet);
+
+                response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/telemetry/environmental",
+                        packet);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    UpdateTelemetryVisualization(
+                        floatVal.ToString("F2"),
+                        "Environmental");
+
+                    AddTelemetryPoint(floatVal);
+                }
             }
-            else if (CmbCategory.SelectedIndex == 1) // Power Consumption (Int)
+
+            // Power telemetry (int)
+            else if (CmbCategory.SelectedIndex == 1)
             {
                 if (!int.TryParse(rawValue, out int intVal))
                 {
-                    MessageBox.Show("Please enter a whole number for Power Consumption.", "Format Error");
+                    MessageBox.Show(
+                        "Please enter a whole number for Power Consumption.",
+                        "Format Error");
                     return;
                 }
-                var packet = new TelemetryPacket<int>(mac, deploymentRaw, intVal);
-                response = await _httpClient.PostAsJsonAsync("/api/telemetry/power", packet);
+
+                var packet =
+                    new TelemetryPacket<int>(
+                        mac,
+                        deploymentRaw,
+                        intVal);
+
+                response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/telemetry/power",
+                        packet);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    UpdateTelemetryVisualization(
+                        intVal.ToString(),
+                        "Power");
+
+                    AddTelemetryPoint(intVal);
+                }
             }
-            else if (CmbCategory.SelectedIndex == 2) // Actuator (Bool)
+
+            // Actuator telemetry (bool)
+            else if (CmbCategory.SelectedIndex == 2)
             {
                 if (!bool.TryParse(rawValue, out bool boolVal))
                 {
-                    MessageBox.Show("Please enter 'true' or 'false' for Actuator data.", "Format Error");
+                    MessageBox.Show(
+                        "Please enter 'true' or 'false' for Actuator data.",
+                        "Format Error");
                     return;
                 }
-                var packet = new TelemetryPacket<bool>(mac, deploymentRaw, boolVal);
-                response = await _httpClient.PostAsJsonAsync("/api/telemetry/actuator", packet);
+
+                var packet =
+                    new TelemetryPacket<bool>(
+                        mac,
+                        deploymentRaw,
+                        boolVal);
+
+                response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/telemetry/actuator",
+                        packet);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    UpdateTelemetryVisualization(
+                        boolVal ? "ON" : "OFF",
+                        "Actuator");
+
+                    AddTelemetryPoint(
+                        boolVal ? 1 : 0);
+                }
             }
 
+            // API response handling
             if (response != null && response.IsSuccessStatusCode)
             {
-                LogTelemetryFeed($"[INGESTED] MAC: {mac} | Value: {rawValue} | Type: {CmbCategory.Text.Split(' ')[0]}");
+                LogTelemetryFeed(
+                    $"[INGESTED] MAC: {mac} | Value: {rawValue} | Type: {CmbCategory.Text.Split(' ')[0]}");
+
+                LblPacketCount.Text =
+                    (int.Parse(LblPacketCount.Text) + 1).ToString();
             }
             else
             {
-                LogTelemetryFeed($"[API ERROR] HTTP {response?.StatusCode} received from gateway.");
+                LogTelemetryFeed(
+                    $"[API ERROR] HTTP {response?.StatusCode} received from gateway.");
             }
         }
         catch (Exception ex)
         {
-            LogTelemetryFeed($"[CONNECTION ERROR] Failed to push packet: {ex.Message}");
+            LogTelemetryFeed(
+                $"[CONNECTION ERROR] Failed to push packet: {ex.Message}");
         }
     }
+    private void UpdateTelemetryVisualization(string value, string category)
+    {
+        LblCurrentReading.Text = value;
+        LblReadingCategory.Text = category + " telemetry";
+        LblLastUpdate.Text = DateTime.Now.ToString("HH:mm:ss");
+    }
 
+
+    private void AddTelemetryPoint(double value)
+    {
+        // Remove old points when the chart gets crowded
+        if (TelemetryChartCanvas.Children.Count > 40)
+        {
+            TelemetryChartCanvas.Children.RemoveAt(0);
+        }
+
+        double canvasWidth = TelemetryChartCanvas.ActualWidth;
+        double canvasHeight = TelemetryChartCanvas.ActualHeight;
+
+        if (canvasWidth <= 0 || canvasHeight <= 0)
+        {
+            return;
+        }
+
+        // Convert the telemetry value into a vertical chart position.
+        // Values are normalized between 0 and 100 for visualization.
+        double normalizedValue = Math.Max(0, Math.Min(100, value));
+
+        double x = TelemetryChartCanvas.Children.Count * 12;
+        double y =
+            canvasHeight -
+            ((normalizedValue / 100.0) * canvasHeight);
+
+        // Keep the point inside the canvas.
+        if (x > canvasWidth)
+        {
+            x = canvasWidth - 5;
+        }
+
+        Ellipse point = new Ellipse
+        {
+            Width = 7,
+            Height = 7,
+            Fill = new SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(32, 201, 151))
+        };
+
+        Canvas.SetLeft(point, x);
+        Canvas.SetTop(point, y);
+
+        TelemetryChartCanvas.Children.Add(point);
+    }
+    
+    
     private void BtnSimulateAggregation_Click(object sender, RoutedEventArgs e)
     {
         TelemetryPacket<float> meterA = new TelemetryPacket<float>("00:1B:44:11:3A:01", "Sub-Zone B", 35.2f);
