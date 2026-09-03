@@ -153,5 +153,66 @@ app.MapGet(
     });
 
 
+//media upload
+app.MapPost(
+    "/api/sensors/{macAddress}/attachment",
+    async (
+        string macAddress,
+        IFormFile file,
+        SensorService sensorService) =>
+    {
+        if (file == null || file.Length == 0)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "A valid attachment file is required."
+            });
+        }
+
+        SensorProfile? sensor =
+            sensorService.GetSensorByMacAddress(macAddress);
+
+        if (sensor == null)
+        {
+            return Results.NotFound(new
+            {
+                Message = "Sensor with the specified MAC address was not found."
+            });
+        }
+
+        string attachmentsFolder =
+            Path.Combine(
+                AppContext.BaseDirectory,
+                "Attachments");
+
+        Directory.CreateDirectory(attachmentsFolder);
+
+        string safeFileName =
+            Path.GetFileName(file.FileName);
+
+        string savedFilePath =
+            Path.Combine(
+                attachmentsFolder,
+                $"{macAddress.Replace(":", "_")}_{safeFileName}");
+
+        await using FileStream stream =
+            new FileStream(
+                savedFilePath,
+                FileMode.Create);
+
+        await file.CopyToAsync(stream);
+
+        sensor.AttachmentFileName = safeFileName;
+        sensor.AttachmentFilePath = savedFilePath;
+
+        return Results.Ok(new
+        {
+            Message = "Attachment successfully uploaded.",
+            FileName = safeFileName,
+            FilePath = savedFilePath,
+            Sensor = sensor
+        });
+    });
+
 app.Run();
 
