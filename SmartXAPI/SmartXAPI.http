@@ -140,6 +140,55 @@ Content-Type: application/json
   "sensorValue": true
 }
 
+### Actuator 1
+POST http://localhost:5198/api/telemetry/actuator
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:D1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": true
+}
+
+### Actuator 2
+POST http://localhost:5198/api/telemetry/actuator
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:D1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": false
+}
+
+### Actuator 3
+POST http://localhost:5198/api/telemetry/actuator
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:D1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": true
+}
+
+### Actuator 4
+POST http://localhost:5198/api/telemetry/actuator
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:D1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": true
+}
+
+### Actuator 5
+POST http://localhost:5198/api/telemetry/actuator
+Content-Type: application/json
+
+{
+  "deviceMacAddress": "00:1B:44:11:3A:D1",
+  "deploymentLocation": "Facility A/Zone 1/Sub-Zone B",
+  "sensorValue": false
+}
 
 ### Get actuator telemetry
 GET http://localhost:5198/api/telemetry/actuator
