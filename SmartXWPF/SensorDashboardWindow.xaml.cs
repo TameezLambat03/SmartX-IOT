@@ -22,6 +22,9 @@ public partial class SensorDashboardWindow : Window
 {
     private readonly HttpClient _httpClient = new HttpClient();
     private string _attachedFilePath = string.Empty;
+    private readonly List<double> _environmentalHistory = new();
+    private readonly List<double> _powerHistory = new();
+    private readonly List<double> _actuatorHistory = new();
 
 
 
@@ -322,7 +325,8 @@ public partial class SensorDashboardWindow : Window
                         floatVal.ToString("F2"),
                         "Environmental");
 
-                    AddTelemetryPoint(floatVal);
+                    AddTelemetryPoint(floatVal, "Environmental");
+
                 }
             }
 
@@ -354,7 +358,7 @@ public partial class SensorDashboardWindow : Window
                         intVal.ToString(),
                         "Power");
 
-                    AddTelemetryPoint(intVal);
+                    AddTelemetryPoint(intVal,"Power");
                 }
             }
 
@@ -387,7 +391,7 @@ public partial class SensorDashboardWindow : Window
                         "Actuator");
 
                     AddTelemetryPoint(
-                        boolVal ? 1 : 0);
+                        boolVal ? 1 : 0,"Actuator");
                 }
             }
 
@@ -412,6 +416,163 @@ public partial class SensorDashboardWindow : Window
                 $"[CONNECTION ERROR] Failed to push packet: {ex.Message}");
         }
     }
+    private async void BtnSeedTelemetry_Click(object sender, RoutedEventArgs e)
+    {
+        string mac = TxtMacAddress.Text.Trim();
+        string deployment = TxtDeploymentPath.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(mac))
+        {
+            MessageBox.Show(
+                "Please enter a sensor MAC address before seeding telemetry.",
+                "Mock Telemetry",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(deployment))
+        {
+            MessageBox.Show(
+                "Please enter a deployment location before seeding telemetry.",
+                "Mock Telemetry",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        try
+        {
+            Random random = new Random();
+
+            int environmentalCount = 100;
+            int powerCount = 100;
+            int actuatorCount = 100;
+
+            int successfulPackets = 0;
+
+            LogTelemetryFeed(
+                $"[SEED START] Generating {environmentalCount + powerCount + actuatorCount} mock telemetry packets...");
+
+            // Environmental telemetry
+            for (int i = 0; i < environmentalCount; i++)
+            {
+                float value = 40.0f + (float)(random.NextDouble() * 30.0);
+
+                TelemetryPacket<float> packet =
+                    new TelemetryPacket<float>(
+                        mac,
+                        deployment,
+                        value);
+
+                HttpResponseMessage response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/telemetry/environmental",
+                        packet);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    successfulPackets++;
+
+                    UpdateTelemetryVisualization(
+                        value.ToString("F2"),
+                        "Environmental");
+
+                    AddTelemetryPoint(value,"Environmental");
+
+                    LblPacketCount.Text =
+                        (int.Parse(LblPacketCount.Text) + 1).ToString();
+                }
+            }
+
+            // Power telemetry
+            for (int i = 0; i < powerCount; i++)
+            {
+                int value = random.Next(200, 1001);
+
+                TelemetryPacket<int> packet =
+                    new TelemetryPacket<int>(
+                        mac,
+                        deployment,
+                        value);
+
+                HttpResponseMessage response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/telemetry/power",
+                        packet);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    successfulPackets++;
+
+                    UpdateTelemetryVisualization(
+                        value.ToString(),
+                        "Power");
+
+                    AddTelemetryPoint(value,"power");
+
+                    LblPacketCount.Text =
+                        (int.Parse(LblPacketCount.Text) + 1).ToString();
+                }
+            }
+
+            // Actuator telemetry
+            for (int i = 0; i < actuatorCount; i++)
+            {
+                bool value = random.Next(0, 2) == 1;
+
+                TelemetryPacket<bool> packet =
+                    new TelemetryPacket<bool>(
+                        mac,
+                        deployment,
+                        value);
+
+                HttpResponseMessage response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/telemetry/actuator",
+                        packet);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    successfulPackets++;
+
+                    UpdateTelemetryVisualization(
+                        value ? "ON" : "OFF",
+                        "Actuator");
+
+                    AddTelemetryPoint(
+                        value ? 1 : 0,"Actuator");
+
+                    LblPacketCount.Text =
+                        (int.Parse(LblPacketCount.Text) + 1).ToString();
+                }
+            }
+            DrawTelemetryChart(
+    _environmentalHistory,
+    "Environmental");
+            LogTelemetryFeed(
+                $"[SEED COMPLETE] Successfully processed {successfulPackets} mock telemetry packets.");
+
+            MessageBox.Show(
+                $"Mock telemetry seeding completed.\n\nSuccessful packets: {successfulPackets}",
+                "Smart-X",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            LogTelemetryFeed(
+                $"[SEED ERROR] {ex.Message}");
+
+            MessageBox.Show(
+                $"Mock telemetry seeding failed.\n\n{ex.Message}",
+                "Mock Telemetry Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
     private void UpdateTelemetryVisualization(string value, string category)
     {
         LblCurrentReading.Text = value;
@@ -420,52 +581,151 @@ public partial class SensorDashboardWindow : Window
     }
 
 
-    private void AddTelemetryPoint(double value)
+    private void AddTelemetryPoint(double value, string category)
     {
-        // Remove old points when the chart gets crowded
-        if (TelemetryChartCanvas.Children.Count > 40)
+        List<double> history;
+
+        if (category == "Environmental")
         {
-            TelemetryChartCanvas.Children.RemoveAt(0);
+            history = _environmentalHistory;
+        }
+        else if (category == "Power")
+        {
+            history = _powerHistory;
+        }
+        else
+        {
+            history = _actuatorHistory;
         }
 
-        double canvasWidth = TelemetryChartCanvas.ActualWidth;
-        double canvasHeight = TelemetryChartCanvas.ActualHeight;
+        history.Add(value);
 
-        if (canvasWidth <= 0 || canvasHeight <= 0)
+        // Keep only the latest 30 readings for the visual chart.
+        if (history.Count > 30)
+        {
+            history.RemoveAt(0);
+        }
+
+        DrawTelemetryChart(history, category);
+    }
+    private void DrawTelemetryChart(
+    List<double> history,
+    string category)
+    {
+        TelemetryChartCanvas.Children.Clear();
+
+        double width = TelemetryChartCanvas.ActualWidth;
+        double height = TelemetryChartCanvas.ActualHeight;
+
+        if (width <= 0 || height <= 0 || history.Count == 0)
         {
             return;
         }
 
-        // Convert the telemetry value into a vertical chart position.
-        // Values are normalized between 0 and 100 for visualization.
-        double normalizedValue = Math.Max(0, Math.Min(100, value));
+        double minimum;
+        double maximum;
 
-        double x = TelemetryChartCanvas.Children.Count * 12;
-        double y =
-            canvasHeight -
-            ((normalizedValue / 100.0) * canvasHeight);
-
-        // Keep the point inside the canvas.
-        if (x > canvasWidth)
+        // Give each telemetry category an appropriate scale.
+        if (category == "Actuator")
         {
-            x = canvasWidth - 5;
+            minimum = 0;
+            maximum = 1;
+        }
+        else
+        {
+            minimum = history.Min();
+            maximum = history.Max();
+
+            // Prevent a completely flat graph when all values are similar.
+            if (Math.Abs(maximum - minimum) < 0.01)
+            {
+                minimum -= 1;
+                maximum += 1;
+            }
         }
 
-        Ellipse point = new Ellipse
+        double horizontalStep =
+            history.Count > 1
+                ? width / (history.Count - 1)
+                : width;
+
+        for (int i = 0; i < history.Count; i++)
         {
-            Width = 7,
-            Height = 7,
-            Fill = new SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(32, 201, 151))
-        };
+            double value = history[i];
 
-        Canvas.SetLeft(point, x);
-        Canvas.SetTop(point, y);
+            double normalized =
+                (value - minimum) / (maximum - minimum);
 
-        TelemetryChartCanvas.Children.Add(point);
+            normalized =
+                Math.Max(0, Math.Min(1, normalized));
+
+            double x =
+                i * horizontalStep;
+
+            double y =
+                height - (normalized * height);
+
+            Ellipse point = new Ellipse
+            {
+                Width = 6,
+                Height = 6,
+                Fill = new SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(
+                        32,
+                        201,
+                        151))
+            };
+
+            Canvas.SetLeft(point, x - 3);
+            Canvas.SetTop(point, y - 3);
+
+            TelemetryChartCanvas.Children.Add(point);
+
+            // Connect this point to the previous point.
+            if (i > 0)
+            {
+                double previousValue = history[i - 1];
+
+                double previousNormalized =
+                    (previousValue - minimum) /
+                    (maximum - minimum);
+
+                previousNormalized =
+                    Math.Max(
+                        0,
+                        Math.Min(1, previousNormalized));
+
+                double previousX =
+                    (i - 1) * horizontalStep;
+
+                double previousY =
+                    height -
+                    (previousNormalized * height);
+
+                Line line = new Line
+                {
+                    X1 = previousX,
+                    Y1 = previousY,
+                    X2 = x,
+                    Y2 = y,
+                    Stroke =
+                        new SolidColorBrush(
+                            System.Windows.Media.Color.FromRgb(
+                                32,
+                                201,
+                                151)),
+                    StrokeThickness = 2
+                };
+
+                // Put the line behind the points.
+                TelemetryChartCanvas.Children.Insert(
+                    TelemetryChartCanvas.Children.Count - 1,
+                    line);
+            }
+        }
     }
-    
-    
+
+
     private void BtnSimulateAggregation_Click(object sender, RoutedEventArgs e)
     {
         TelemetryPacket<float> meterA = new TelemetryPacket<float>("00:1B:44:11:3A:01", "Sub-Zone B", 35.2f);

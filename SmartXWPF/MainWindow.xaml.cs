@@ -26,5 +26,10 @@ namespace SmartXWPF
             dashboard.Show();
             this.Close();
         }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

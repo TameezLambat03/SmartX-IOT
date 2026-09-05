@@ -333,6 +333,13 @@
                                 Style="{StaticResource SecondaryButtonStyle}"
                                 Margin="0,8,0,0"
                                 Click="BtnSubmitTelemetry_Click"/>
+                        <!-- Telemetry -->
+                        <Button x:Name="BtnSeedTelemetry"
+                                Content="SEED MOCK TELEMETRY"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="BtnSeedTelemetry_Click"
+                                Margin="0,8,0,0"
+                                Height="36"/>           
 
 
                         <!-- Attachment -->
