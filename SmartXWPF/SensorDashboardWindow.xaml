@@ -11,7 +11,6 @@
 
     <Window.Resources>
 
-        <!-- Colours -->
         <SolidColorBrush x:Key="BackgroundBrush" Color="#101418"/>
         <SolidColorBrush x:Key="PanelBrush" Color="#171D22"/>
         <SolidColorBrush x:Key="PanelLightBrush" Color="#1D252B"/>
@@ -23,7 +22,6 @@
         <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B"/>
         <SolidColorBrush x:Key="DangerBrush" Color="#EF4444"/>
 
-        <!-- TextBox Style -->
         <Style x:Key="InputStyle" TargetType="TextBox">
             <Setter Property="Height" Value="38"/>
             <Setter Property="Background" Value="#11171B"/>
@@ -35,7 +33,6 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <!-- Button Style -->
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="42"/>
             <Setter Property="Background" Value="#20C997"/>
@@ -43,7 +40,6 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
         <Style x:Key="SecondaryButtonStyle" TargetType="Button">
@@ -53,10 +49,8 @@
             <Setter Property="BorderBrush" Value="#34414A"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
-        <!-- Section Heading -->
         <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#F1F5F7"/>
             <Setter Property="FontSize" Value="14"/>
@@ -64,7 +58,6 @@
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
 
-        <!-- Field Label -->
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#8E9AA3"/>
             <Setter Property="FontSize" Value="11"/>
@@ -82,9 +75,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- ========================================================= -->
         <!-- HEADER -->
-        <!-- ========================================================= -->
 
         <Grid Grid.Row="0" Margin="0,0,0,20">
 
@@ -116,10 +107,10 @@
                              Margin="0,0,8,0"/>
 
                     <TextBlock x:Name="LblGatewayStatus"
-           Text="CONNECTING..."
-           Foreground="{StaticResource WarningBrush}"
-           FontSize="11"
-           FontWeight="Bold"/>
+                               Text="CONNECTING..."
+                               Foreground="{StaticResource WarningBrush}"
+                               FontSize="11"
+                               FontWeight="Bold"/>
 
                 </StackPanel>
 
@@ -127,10 +118,7 @@
 
         </Grid>
 
-
-        <!-- ========================================================= -->
         <!-- SUMMARY CARDS -->
-        <!-- ========================================================= -->
 
         <Grid Grid.Row="1" Margin="0,0,0,20">
 
@@ -140,7 +128,6 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Devices -->
             <Border Grid.Column="0"
                     Background="{StaticResource PanelBrush}"
                     BorderBrush="{StaticResource BorderBrush}"
@@ -169,7 +156,6 @@
 
             </Border>
 
-            <!-- Packets -->
             <Border Grid.Column="1"
                     Background="{StaticResource PanelBrush}"
                     BorderBrush="{StaticResource BorderBrush}"
@@ -198,7 +184,6 @@
 
             </Border>
 
-            <!-- Status -->
             <Border Grid.Column="2"
                     Background="{StaticResource PanelBrush}"
                     BorderBrush="{StaticResource BorderBrush}"
@@ -229,10 +214,7 @@
 
         </Grid>
 
-
-        <!-- ========================================================= -->
-        <!-- MAIN CONTENT -->
-        <!-- ========================================================= -->
+        <!-- MAIN -->
 
         <Grid Grid.Row="2">
 
@@ -241,10 +223,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-
-            <!-- ===================================================== -->
-            <!-- LEFT: SENSOR CONFIGURATION -->
-            <!-- ===================================================== -->
+            <!-- LEFT PANEL -->
 
             <Border Grid.Column="0"
                     Background="{StaticResource PanelBrush}"
@@ -258,17 +237,17 @@
 
                     <StackPanel>
 
-                        <TextBlock Text="SENSOR CONFIGURATION"
+                        <!-- REGISTER -->
+
+                        <TextBlock Text="REGISTER SENSOR"
                                    Style="{StaticResource SectionTitleStyle}"/>
 
-                        <TextBlock Text="Register and configure a Smart-X device."
+                        <TextBlock Text="Create a sensor profile before sending telemetry."
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="11"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,8"/>
 
-
-                        <!-- MAC -->
                         <TextBlock Text="DEVICE MAC ADDRESS / NODE ID"
                                    Style="{StaticResource FieldLabelStyle}"/>
 
@@ -276,8 +255,6 @@
                                  Style="{StaticResource InputStyle}"
                                  Text="00:1B:44:11:3A:B7"/>
 
-
-                        <!-- Deployment -->
                         <TextBlock Text="DEPLOYMENT HIERARCHY"
                                    Style="{StaticResource FieldLabelStyle}"/>
 
@@ -285,25 +262,21 @@
                                  Style="{StaticResource InputStyle}"
                                  Text="Facility A/Zone 1/Sub-Zone B"/>
 
-
                         <TextBlock Text="Example: Facility / Zone / Sub-Zone"
                                    Foreground="#66737C"
                                    FontSize="9"
                                    Margin="0,4,0,0"/>
 
-
-                        <!-- Category -->
                         <TextBlock Text="SENSOR CATEGORY"
-           Style="{StaticResource FieldLabelStyle}"/>
+                                   Style="{StaticResource FieldLabelStyle}"/>
 
                         <ComboBox x:Name="CmbCategory"
-          Height="38"
-          SelectedIndex="0"
-          Background="#11171B"
-          Foreground="#11171B"
-          BorderBrush="#2B363D"
-          FontSize="12"
-          SelectionChanged="CmbCategory_SelectionChanged">
+                                  Height="38"
+                                  SelectedIndex="0"
+                                  Background="#11171B"
+                                  Foreground="#11171B"
+                                  BorderBrush="#2B363D"
+                                  SelectionChanged="CmbCategory_SelectionChanged">
 
                             <ComboBoxItem Content="Environmental"/>
                             <ComboBoxItem Content="Power Consumption"/>
@@ -311,54 +284,171 @@
 
                         </ComboBox>
 
-
-                        <!-- Reading -->
-                        <TextBlock Text="CURRENT SENSOR READING"
-           Style="{StaticResource FieldLabelStyle}"/>
-
-                        <TextBox x:Name="TxtSensorValue"
-         Style="{StaticResource InputStyle}"
-         Text="45.5"/>
-
-                        <ComboBox x:Name="CmbActuatorState"
-          Height="38"
-          SelectedIndex="0"
-          Background="#11171B"
-          Foreground="#11171B"
-          BorderBrush="#2B363D"
-          FontSize="12"
-          Visibility="Collapsed">
-
-                            <ComboBoxItem Content="ON"/>
-                            <ComboBoxItem Content="OFF"/>
-
-                        </ComboBox>
-
-
-                        <!-- Register -->
                         <Button x:Name="BtnRegisterSensor"
                                 Content="REGISTER SENSOR PROFILE"
                                 Style="{StaticResource PrimaryButtonStyle}"
                                 Margin="0,18,0,0"
                                 Click="BtnRegisterSensor_Click"/>
 
+                        <!-- REGISTERED SENSORS -->
 
-                        <!-- Telemetry -->
+                        <TextBlock Text="REGISTERED SENSORS"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   Margin="0,22,0,4"/>
+
+                        <TextBlock x:Name="LblSensorCount"
+                                   Text="0 registered sensor(s)"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="10"
+                                   Margin="0,0,0,8"/>
+
+                        <ListBox x:Name="LstSensors"
+                                 Height="150"
+                                 Background="#11171B"
+                                 Foreground="{StaticResource TextBrush}"
+                                 BorderBrush="#2B363D"
+                                 BorderThickness="1"
+                                 SelectionChanged="LstSensors_SelectionChanged">
+
+                            <ListBox.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Border Padding="8"
+                                            BorderBrush="#263139"
+                                            BorderThickness="0,0,0,1">
+
+                                        <StackPanel>
+
+                                            <TextBlock Text="{Binding DeviceMacAddress}"
+                                                       Foreground="{StaticResource TextBrush}"
+                                                       FontWeight="Bold"
+                                                       FontSize="11"/>
+
+                                            <TextBlock Text="{Binding Category}"
+                                                       Foreground="{StaticResource AccentBrush}"
+                                                       FontSize="10"
+                                                       Margin="0,2,0,0"/>
+
+                                            <TextBlock Text="{Binding DeploymentLocation}"
+                                                       Foreground="{StaticResource MutedTextBrush}"
+                                                       FontSize="9"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,2,0,0"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </DataTemplate>
+
+                            </ListBox.ItemTemplate>
+
+                        </ListBox>
+
+                        <Button x:Name="BtnRefreshSensors"
+                                Content="REFRESH SENSOR LIST"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="BtnRefreshSensors_Click"
+                                Margin="0,8,0,0"/>
+
+                        <!-- SELECTED SENSOR -->
+
+                        <TextBlock Text="SELECTED SENSOR"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   Margin="0,20,0,4"/>
+
+                        <Border Background="#11171B"
+                                BorderBrush="#2B363D"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10">
+
+                            <StackPanel>
+
+                                <TextBlock Text="MAC ADDRESS"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="9"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock x:Name="LblSelectedSensorMac"
+                                           Text="No sensor selected"
+                                           Foreground="{StaticResource TextBrush}"
+                                           FontSize="11"
+                                           Margin="0,3,0,7"/>
+
+                                <TextBlock Text="CATEGORY"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="9"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock x:Name="LblSelectedSensorCategory"
+                                           Text="—"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           FontSize="11"
+                                           Margin="0,3,0,7"/>
+
+                                <TextBlock Text="DEPLOYMENT"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="9"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock x:Name="LblSelectedSensorLocation"
+                                           Text="—"
+                                           Foreground="{StaticResource TextBrush}"
+                                           FontSize="10"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,0"/>
+
+                            </StackPanel>
+
+                        </Border>
+
+                        <!-- TELEMETRY -->
+
+                        <TextBlock Text="SEND TELEMETRY"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   Margin="0,20,0,4"/>
+
+                        <TextBlock Text="Telemetry is sent using the selected registered sensor."
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="10"
+                                   TextWrapping="Wrap"/>
+
+                        <TextBlock Text="SENSOR VALUE"
+                                   Style="{StaticResource FieldLabelStyle}"/>
+
+                        <TextBox x:Name="TxtSensorValue"
+                                 Style="{StaticResource InputStyle}"
+                                 Text="45.5"/>
+
+                        <ComboBox x:Name="CmbActuatorState"
+                                  Height="38"
+                                  SelectedIndex="0"
+                                  Background="#11171B"
+                                  Foreground="#11171B"
+                                  BorderBrush="#2B363D"
+                                  Visibility="Collapsed">
+
+                            <ComboBoxItem Content="ON"/>
+                            <ComboBoxItem Content="OFF"/>
+
+                        </ComboBox>
+
                         <Button x:Name="BtnSubmitTelemetry"
                                 Content="PUSH TELEMETRY"
                                 Style="{StaticResource SecondaryButtonStyle}"
                                 Margin="0,8,0,0"
                                 Click="BtnSubmitTelemetry_Click"/>
-                        <!-- Telemetry -->
+
                         <Button x:Name="BtnSeedTelemetry"
                                 Content="SEED MOCK TELEMETRY"
                                 Style="{StaticResource SecondaryButtonStyle}"
-                                Click="BtnSeedTelemetry_Click"
                                 Margin="0,8,0,0"
-                                Height="36"/>           
+                                Click="BtnSeedTelemetry_Click"/>
 
+                        <!-- ATTACHMENT -->
 
-                        <!-- Attachment -->
                         <TextBlock Text="DEVICE ARTIFACT"
                                    Style="{StaticResource FieldLabelStyle}"
                                    Margin="0,20,0,5"/>
@@ -375,8 +465,8 @@
                                    TextWrapping="Wrap"
                                    Margin="0,6,0,0"/>
 
+                        <!-- DEVELOPER TOOLS -->
 
-                        <!-- Developer tools -->
                         <TextBlock Text="DEVELOPER TESTING"
                                    Style="{StaticResource FieldLabelStyle}"
                                    Margin="0,20,0,5"/>
@@ -398,10 +488,7 @@
 
             </Border>
 
-
-            <!-- ===================================================== -->
-            <!-- RIGHT: TELEMETRY MONITOR -->
-            <!-- ===================================================== -->
+            <!-- RIGHT PANEL -->
 
             <Border Grid.Column="1"
                     Background="{StaticResource PanelBrush}"
@@ -419,8 +506,8 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <!-- MONITOR HEADER -->
 
-                    <!-- Monitor header -->
                     <Grid Grid.Row="0"
                           Margin="0,0,0,15">
 
@@ -452,8 +539,6 @@
 
                     </Grid>
 
-
-                    <!-- Telemetry visualization and feed -->
                     <Grid Grid.Row="1">
 
                         <Grid.RowDefinitions>
@@ -462,14 +547,15 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Current reading summary -->
+                        <!-- CURRENT READING -->
+
                         <Border Grid.Row="0"
-            Background="#11171B"
-            BorderBrush="#2B363D"
-            BorderThickness="1"
-            CornerRadius="6"
-            Padding="12"
-            Margin="0,0,0,10">
+                                Background="#11171B"
+                                BorderBrush="#2B363D"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,10">
 
                             <Grid>
 
@@ -478,43 +564,40 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0">
+                                <StackPanel>
 
                                     <TextBlock Text="CURRENT TELEMETRY"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           FontSize="9"
-                           FontWeight="Bold"/>
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="9"
+                                               FontWeight="Bold"/>
 
                                     <TextBlock x:Name="LblCurrentReading"
-                           Text="--"
-                           Foreground="{StaticResource TextBrush}"
-                           FontSize="26"
-                           FontWeight="Bold"
-                           Margin="0,3,0,0"/>
+                                               Text="--"
+                                               Foreground="{StaticResource TextBrush}"
+                                               FontSize="26"
+                                               FontWeight="Bold"
+                                               Margin="0,3,0,0"/>
 
                                     <TextBlock x:Name="LblReadingCategory"
-                           Text="Waiting for telemetry..."
-                           Foreground="{StaticResource MutedTextBrush}"
-                           FontSize="10"/>
+                                               Text="Waiting for telemetry..."
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="10"/>
 
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="1"
-                        HorizontalAlignment="Right">
+                                <StackPanel Grid.Column="1">
 
                                     <TextBlock Text="LAST UPDATE"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           FontSize="9"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Right"/>
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="9"
+                                               FontWeight="Bold"/>
 
                                     <TextBlock x:Name="LblLastUpdate"
-                           Text="--:--:--"
-                           Foreground="{StaticResource AccentBrush}"
-                           FontSize="13"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Right"
-                           Margin="0,5,0,0"/>
+                                               Text="--:--:--"
+                                               Foreground="{StaticResource AccentBrush}"
+                                               FontSize="13"
+                                               FontWeight="Bold"
+                                               Margin="0,5,0,0"/>
 
                                 </StackPanel>
 
@@ -522,50 +605,49 @@
 
                         </Border>
 
+                        <!-- CHART -->
 
-                        <!-- Visual telemetry trend -->
                         <Border Grid.Row="1"
-            Background="#0E1316"
-            BorderBrush="#263139"
-            BorderThickness="1"
-            CornerRadius="6"
-            Padding="10"
-            Margin="0,0,0,10">
+                                Background="#0E1316"
+                                BorderBrush="#263139"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Margin="0,0,0,10">
 
                             <Grid>
 
                                 <TextBlock Text="TELEMETRY TREND"
-                       Foreground="{StaticResource MutedTextBrush}"
-                       FontSize="9"
-                       FontWeight="Bold"
-                       VerticalAlignment="Top"/>
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="9"
+                                           FontWeight="Bold"/>
 
                                 <Canvas x:Name="TelemetryChartCanvas"
-                    Margin="0,20,0,0"
-                    Background="#11171B"
-                    ClipToBounds="True"/>
+                                        Margin="0,20,0,0"
+                                        Background="#11171B"
+                                        ClipToBounds="True"/>
 
                             </Grid>
 
                         </Border>
 
+                        <!-- FEED -->
 
-                        <!-- Existing telemetry feed -->
                         <Border Grid.Row="2"
-            Background="#0E1316"
-            BorderBrush="#263139"
-            BorderThickness="1"
-            CornerRadius="6"
-            Padding="12">
+                                Background="#0E1316"
+                                BorderBrush="#263139"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12">
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
 
                                 <TextBlock x:Name="TxtTelemetryFeed"
-                       Foreground="#8FF0C8"
-                       FontFamily="Consolas"
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       Text="Gateway online.&#x0a;Telemetry ingestion pipeline ready.&#x0a;Waiting for sensor data...&#x0a;"/>
+                                           Foreground="#8FF0C8"
+                                           FontFamily="Consolas"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Text="Gateway online.&#x0a;Telemetry ingestion pipeline ready.&#x0a;Waiting for sensor data...&#x0a;"/>
 
                             </ScrollViewer>
 
@@ -573,8 +655,8 @@
 
                     </Grid>
 
+                    <!-- STATUS -->
 
-                    <!-- Status / anomaly panel -->
                     <Border Grid.Row="2"
                             Background="#11171B"
                             BorderBrush="#2B363D"
@@ -590,8 +672,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-
-                            <StackPanel Grid.Column="0">
+                            <StackPanel>
 
                                 <TextBlock x:Name="LblStatusIndicator"
                                            Text="● STATUS: NORMAL"
@@ -606,9 +687,8 @@
 
                             </StackPanel>
 
-
-                            <TextBlock Grid.Column="1"
-                                       x:Name="LblAnomalyAlert"
+                            <TextBlock x:Name="LblAnomalyAlert"
+                                       Grid.Column="1"
                                        Text="NO ANOMALIES DETECTED"
                                        Foreground="{StaticResource MutedTextBrush}"
                                        FontSize="10"
