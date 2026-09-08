@@ -3,11 +3,20 @@
 public class DeploymentNode
 {
     public string Name { get; set; }
-    public DeploymentNode? Child { get; set; }
 
-    public DeploymentNode(string name, DeploymentNode? child = null)
+    public List<DeploymentNode> Children { get; set; }
+
+    public DeploymentNode(
+        string name,
+        IEnumerable<DeploymentNode>? children = null)
     {
         Name = name;
-        Child = child;
+        Children = children?.ToList()
+            ?? new List<DeploymentNode>();
+    }
+
+    public void AddChild(DeploymentNode child)
+    {
+        Children.Add(child);
     }
 }

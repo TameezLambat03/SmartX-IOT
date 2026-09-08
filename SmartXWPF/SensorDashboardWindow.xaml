@@ -115,10 +115,11 @@
                              Fill="{StaticResource AccentBrush}"
                              Margin="0,0,8,0"/>
 
-                    <TextBlock Text="GATEWAY ONLINE"
-                               Foreground="{StaticResource AccentBrush}"
-                               FontSize="11"
-                               FontWeight="Bold"/>
+                    <TextBlock x:Name="LblGatewayStatus"
+           Text="CONNECTING..."
+           Foreground="{StaticResource WarningBrush}"
+           FontSize="11"
+           FontWeight="Bold"/>
 
                 </StackPanel>
 
@@ -293,15 +294,16 @@
 
                         <!-- Category -->
                         <TextBlock Text="SENSOR CATEGORY"
-                                   Style="{StaticResource FieldLabelStyle}"/>
+           Style="{StaticResource FieldLabelStyle}"/>
 
                         <ComboBox x:Name="CmbCategory"
-                                  Height="38"
-                                  SelectedIndex="0"
-                                  Background="#11171B"
-                                  Foreground="#11171B"
-                                  BorderBrush="#2B363D"
-                                  FontSize="12">
+          Height="38"
+          SelectedIndex="0"
+          Background="#11171B"
+          Foreground="#11171B"
+          BorderBrush="#2B363D"
+          FontSize="12"
+          SelectionChanged="CmbCategory_SelectionChanged">
 
                             <ComboBoxItem Content="Environmental"/>
                             <ComboBoxItem Content="Power Consumption"/>
@@ -312,11 +314,25 @@
 
                         <!-- Reading -->
                         <TextBlock Text="CURRENT SENSOR READING"
-                                   Style="{StaticResource FieldLabelStyle}"/>
+           Style="{StaticResource FieldLabelStyle}"/>
 
                         <TextBox x:Name="TxtSensorValue"
-                                 Style="{StaticResource InputStyle}"
-                                 Text="45.5"/>
+         Style="{StaticResource InputStyle}"
+         Text="45.5"/>
+
+                        <ComboBox x:Name="CmbActuatorState"
+          Height="38"
+          SelectedIndex="0"
+          Background="#11171B"
+          Foreground="#11171B"
+          BorderBrush="#2B363D"
+          FontSize="12"
+          Visibility="Collapsed">
+
+                            <ComboBoxItem Content="ON"/>
+                            <ComboBoxItem Content="OFF"/>
+
+                        </ComboBox>
 
 
                         <!-- Register -->

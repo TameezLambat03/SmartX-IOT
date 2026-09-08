@@ -1,14 +1,13 @@
 ﻿using Microsoft.Win32;
-using SmartX.Shared;
 using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -16,63 +15,138 @@ using System.Windows.Shapes;
 
 namespace SmartXWPF;
 
-
-
 public partial class SensorDashboardWindow : Window
 {
     private readonly HttpClient _httpClient = new HttpClient();
+
     private string _attachedFilePath = string.Empty;
+
+    // Custom dashboard feature:
+    // Stores the latest readings displayed on the visual telemetry chart.
     private readonly List<double> _environmentalHistory = new();
     private readonly List<double> _powerHistory = new();
     private readonly List<double> _actuatorHistory = new();
 
+    private int _packetCount = 0;
 
 
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
 
     public SensorDashboardWindow()
     {
         InitializeComponent();
 
+        string? apiBaseUrl =
+            ConfigurationManager.AppSettings["ApiBaseUrl"];
+
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            throw new InvalidOperationException(
+                "The Smart-X API base URL is not configured.");
+        }
+
         _httpClient.BaseAddress =
-            new Uri(ConfigurationManager.AppSettings["ApiBaseUrl"]);
+            new Uri(apiBaseUrl);
 
         Loaded += async (sender, e) =>
         {
             await LoadRegisteredSensorCount();
         };
     }
+
+
+    // ============================================================
+    // SENSOR COUNT
+    // ============================================================
+
     private async Task LoadRegisteredSensorCount()
     {
         try
         {
-            var response =
+            HttpResponseMessage response =
                 await _httpClient.GetAsync("/api/sensors");
 
             if (response.IsSuccessStatusCode)
             {
-                var sensors =
+                List<SensorProfile>? sensors =
                     await response.Content
                         .ReadFromJsonAsync<List<SensorProfile>>();
 
-                int count = sensors?.Count ?? 0;
-                
+                int count =
+                    sensors?.Count ?? 0;
 
-                LblDeviceCount.Text = count.ToString();
+                LblDeviceCount.Text =
+                    count.ToString();
+
+                SetGatewayStatus(true);
 
                 LogTelemetryFeed(
-                    $"[SYSTEM] Loaded {count} registered sensor profile(s).");
+                    $"[SYSTEM] Gateway connection established. Loaded {count} registered sensor profile(s).");
+            }
+            else
+            {
+                SetGatewayStatus(false);
+
+                LogTelemetryFeed(
+                    $"[SYSTEM WARNING] Gateway returned HTTP {response.StatusCode} while loading registered sensors.");
             }
         }
-        catch (Exception ex)
+        catch
         {
+            SetGatewayStatus(false);
+
             LogTelemetryFeed(
-                $"[SYSTEM WARNING] Could not load registered sensors: {ex.Message}");
+                "[SYSTEM WARNING] Could not connect to the Smart-X API while loading registered sensors.");
+        }
+    }
+    private void SetGatewayStatus(bool isOnline)
+    {
+        if (isOnline)
+        {
+            LblGatewayStatus.Text =
+                "GATEWAY ONLINE";
+
+            LblGatewayStatus.Foreground =
+                new SolidColorBrush(
+                    Colors.LightGreen);
+
+            LblSystemStatus.Text =
+                "NORMAL";
+
+            LblSystemStatus.Foreground =
+                new SolidColorBrush(
+                    Colors.LightGreen);
+        }
+        else
+        {
+            LblGatewayStatus.Text =
+                "GATEWAY OFFLINE";
+
+            LblGatewayStatus.Foreground =
+                new SolidColorBrush(
+                    Colors.Red);
+
+            LblSystemStatus.Text =
+                "GATEWAY OFFLINE";
+
+            LblSystemStatus.Foreground =
+                new SolidColorBrush(
+                    Colors.Red);
         }
     }
 
-    private async void BtnAttachFile_Click(object sender, RoutedEventArgs e)
+    // ============================================================
+    // FILE ATTACHMENT
+    // ============================================================
+
+    private async void BtnAttachFile_Click(
+        object sender,
+        RoutedEventArgs e)
     {
-        string mac = TxtMacAddress.Text.Trim();
+        string mac =
+            TxtMacAddress.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(mac))
         {
@@ -85,11 +159,15 @@ public partial class SensorDashboardWindow : Window
             return;
         }
 
-        OpenFileDialog openFileDialog = new OpenFileDialog
-        {
-            Filter = "Config & Log Files (*.json;*.txt;*.log;*.png;*.jpg)|*.json;*.txt;*.log;*.png;*.jpg|All Files (*.*)|*.*",
-            Title = "Select Sensor Profile Attachment"
-        };
+        OpenFileDialog openFileDialog =
+            new OpenFileDialog
+            {
+                Filter =
+                    "Config & Log Files (*.json;*.txt;*.log;*.png;*.jpg)|*.json;*.txt;*.log;*.png;*.jpg|All Files (*.*)|*.*",
+
+                Title =
+                    "Select Sensor Profile Attachment"
+            };
 
         if (openFileDialog.ShowDialog() != true)
         {
@@ -98,7 +176,8 @@ public partial class SensorDashboardWindow : Window
 
         try
         {
-            _attachedFilePath = openFileDialog.FileName;
+            _attachedFilePath =
+                openFileDialog.FileName;
 
             using MultipartFormDataContent form =
                 new MultipartFormDataContent();
@@ -109,10 +188,13 @@ public partial class SensorDashboardWindow : Window
             using StreamContent fileContent =
                 new StreamContent(fileStream);
 
+            string fileName =
+     System.IO.Path.GetFileName(_attachedFilePath);
+
             form.Add(
                 fileContent,
                 "file",
-                System.IO.Path.GetFileName(_attachedFilePath));
+                fileName);
 
             HttpResponseMessage response =
                 await _httpClient.PostAsync(
@@ -121,17 +203,16 @@ public partial class SensorDashboardWindow : Window
 
             if (response.IsSuccessStatusCode)
             {
-                string fileName =
-                    System.IO.Path.GetFileName(_attachedFilePath);
-
                 long fileSizeKb =
-                    new FileInfo(_attachedFilePath).Length / 1024;
+                    new FileInfo(
+                        _attachedFilePath).Length / 1024;
 
                 LblAttachedFile.Text =
                     $"Attached: {fileName} ({fileSizeKb} KB)";
 
                 LblAttachedFile.Foreground =
-                    new SolidColorBrush(Colors.LightGreen);
+                    new SolidColorBrush(
+                        Colors.LightGreen);
 
                 LogTelemetryFeed(
                     $"[ATTACHMENT UPLOADED] {fileName} → Sensor {mac}");
@@ -144,40 +225,98 @@ public partial class SensorDashboardWindow : Window
             }
             else
             {
-                string errorMessage =
-                    await response.Content.ReadAsStringAsync();
-
                 LogTelemetryFeed(
                     $"[ATTACHMENT ERROR] HTTP {response.StatusCode}");
 
                 MessageBox.Show(
-                    $"The API rejected the attachment.\n\nHTTP Status: {response.StatusCode}\n{errorMessage}",
+                    $"The API rejected the attachment.\n\nHTTP Status: {response.StatusCode}",
                     "Attachment Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
         }
-        catch (Exception ex)
+        catch
         {
             LogTelemetryFeed(
-                $"[ATTACHMENT ERROR] {ex.Message}");
+                "[ATTACHMENT ERROR] Could not upload attachment.");
 
             MessageBox.Show(
-                $"Could not upload the attachment.\n\n{ex.Message}",
+                "Could not upload the attachment. Please verify that the API is running and try again.",
                 "Attachment Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
     }
-    private async void BtnRegisterSensor_Click(object sender, RoutedEventArgs e)
+
+    private void CmbCategory_SelectionChanged(
+    object sender,
+    System.Windows.Controls.SelectionChangedEventArgs e)
     {
-        string mac = TxtMacAddress.Text.Trim();
-        string deployment = TxtDeploymentPath.Text.Trim();
+        if (CmbCategory == null ||
+            TxtSensorValue == null ||
+            CmbActuatorState == null)
+        {
+            return;
+        }
+
+        bool isActuator =
+            CmbCategory.SelectedIndex == 2;
+
+        if (isActuator)
+        {
+            TxtSensorValue.Visibility =
+                Visibility.Collapsed;
+
+            CmbActuatorState.Visibility =
+                Visibility.Visible;
+        }
+        else
+        {
+            TxtSensorValue.Visibility =
+                Visibility.Visible;
+
+            CmbActuatorState.Visibility =
+                Visibility.Collapsed;
+
+            if (CmbCategory.SelectedIndex == 0)
+            {
+                TxtSensorValue.Text = "45.5";
+            }
+            else if (CmbCategory.SelectedIndex == 1)
+            {
+                TxtSensorValue.Text = "742";
+            }
+        }
+    }
+    
+    // SENSOR REGISTRATION
+   
+
+    private async void BtnRegisterSensor_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        string mac =
+            TxtMacAddress.Text.Trim();
+
+        string deployment =
+            TxtDeploymentPath.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(mac))
         {
             MessageBox.Show(
                 "Please enter a device MAC address.",
+                "Sensor Registration",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        if (mac.Length > 17)
+        {
+            MessageBox.Show(
+                "The device MAC address is too long.",
                 "Sensor Registration",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -196,38 +335,53 @@ public partial class SensorDashboardWindow : Window
             return;
         }
 
+        if (deployment.Length > 200)
+        {
+            MessageBox.Show(
+                "The deployment hierarchy is too long.",
+                "Sensor Registration",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        SensorCategory category;
+
+        switch (CmbCategory.SelectedIndex)
+        {
+            case 0:
+                category =
+                    SensorCategory.Environmental;
+                break;
+
+            case 1:
+                category =
+                    SensorCategory.PowerConsumption;
+                break;
+
+            case 2:
+                category =
+                    SensorCategory.Actuator;
+                break;
+
+            default:
+                MessageBox.Show(
+                    "Please select a sensor category.",
+                    "Sensor Registration",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+        }
+
         try
         {
-            SensorCategory category;
-
-            switch (CmbCategory.SelectedIndex)
-            {
-                case 0:
-                    category = SensorCategory.Environmental;
-                    break;
-
-                case 1:
-                    category = SensorCategory.PowerConsumption;
-                    break;
-
-                case 2:
-                    category = SensorCategory.Actuator;
-                    break;
-
-                default:
-                    MessageBox.Show(
-                        "Please select a sensor category.",
-                        "Sensor Registration",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-
-                    return;
-            }
-
-            var sensor = new SensorProfile(
-                mac,
-                deployment,
-                category);
+            SensorProfile sensor =
+                new SensorProfile(
+                    mac,
+                    deployment,
+                    category);
 
             HttpResponseMessage response =
                 await _httpClient.PostAsJsonAsync(
@@ -239,8 +393,10 @@ public partial class SensorDashboardWindow : Window
                 LogTelemetryFeed(
                     $"[REGISTERED] Sensor {mac} | {category} | {deployment}");
 
-                LblSystemStatus.Text = "NORMAL";
-                await LoadRegisteredSensorCount(); 
+                LblSystemStatus.Text =
+                    "NORMAL";
+
+                await LoadRegisteredSensorCount();
 
                 MessageBox.Show(
                     "Sensor successfully registered.",
@@ -248,8 +404,9 @@ public partial class SensorDashboardWindow : Window
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
-            else if (response.StatusCode ==
-                     System.Net.HttpStatusCode.Conflict)
+            else if (
+                response.StatusCode ==
+                System.Net.HttpStatusCode.Conflict)
             {
                 LogTelemetryFeed(
                     $"[REGISTRATION REJECTED] Duplicate MAC address: {mac}");
@@ -272,154 +429,309 @@ public partial class SensorDashboardWindow : Window
                     MessageBoxImage.Error);
             }
         }
-        catch (Exception ex)
+        catch
         {
             LogTelemetryFeed(
-                $"[CONNECTION ERROR] Sensor registration failed: {ex.Message}");
+                "[CONNECTION ERROR] Sensor registration failed.");
 
             MessageBox.Show(
-                $"Could not connect to the Smart-X API.\n\n{ex.Message}",
+                "Could not connect to the Smart-X API.",
                 "Connection Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
     }
 
-    private async void BtnSubmitTelemetry_Click(object sender, RoutedEventArgs e)
+
+    // ============================================================
+    // TELEMETRY SUBMISSION
+    // ============================================================
+
+    private async void BtnSubmitTelemetry_Click(
+        object sender,
+        RoutedEventArgs e)
     {
-        string mac = TxtMacAddress.Text.Trim();
-        string deploymentRaw = TxtDeploymentPath.Text.Trim();
-        string rawValue = TxtSensorValue.Text.Trim();
+        string mac =
+            TxtMacAddress.Text.Trim();
+
+        string deployment =
+            TxtDeploymentPath.Text.Trim();
+
+        string rawValue =
+            TxtSensorValue.Text.Trim();
+
+
+        if (string.IsNullOrWhiteSpace(mac))
+        {
+            MessageBox.Show(
+                "Please enter a device MAC address.",
+                "Telemetry",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(deployment))
+        {
+            MessageBox.Show(
+                "Please enter a deployment hierarchy.",
+                "Telemetry",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+       
 
         try
         {
-            HttpResponseMessage response = null;
+            HttpResponseMessage? response = null;
 
-            // Environmental telemetry (float)
-            if (CmbCategory.SelectedIndex == 0)
+            SensorCategory category;
+
+            switch (CmbCategory.SelectedIndex)
             {
-                if (!float.TryParse(rawValue, out float floatVal))
-                {
+                // ------------------------------------------------
+                // ENVIRONMENTAL
+                // ------------------------------------------------
+
+                case 0:
+
+                    category =
+                        SensorCategory.Environmental;
+
+                    if (!float.TryParse(
+                            rawValue,
+                            out float floatValue))
+                    {
+                        MessageBox.Show(
+                            "Please enter a valid decimal for Environmental data.",
+                            "Format Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+
+                        return;
+                    }
+
+                    if (float.IsNaN(floatValue) ||
+                        float.IsInfinity(floatValue))
+                    {
+                        MessageBox.Show(
+                            "Environmental sensor value must be a valid number.",
+                            "Format Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+
+                        return;
+                    }
+
+                    TelemetryPacket<float> environmentalPacket =
+                        new TelemetryPacket<float>(
+                            mac,
+                            deployment,
+                            floatValue);
+
+                    response =
+                        await _httpClient.PostAsJsonAsync(
+                            "/api/telemetry/environmental",
+                            environmentalPacket);
+
+                    // IMPORTANT:
+                    // The visual anomaly state is updated only
+                    // after the API accepts the packet.
+                    if (response.IsSuccessStatusCode)
+                    {
+                        UpdateTelemetryVisualization(
+                            floatValue.ToString("F2"),
+                            SensorCategory.Environmental);
+
+                        AddTelemetryPoint(
+                            floatValue,
+                            SensorCategory.Environmental);
+
+                        EvaluateVisualAnomaly(
+                            floatValue);
+                    }
+
+                    break;
+
+
+                // ------------------------------------------------
+                // POWER
+                // ------------------------------------------------
+
+                case 1:
+
+                    category =
+                        SensorCategory.PowerConsumption;
+
+                    if (!int.TryParse(
+                            rawValue,
+                            out int intValue))
+                    {
+                        MessageBox.Show(
+                            "Please enter a whole number for Power Consumption.",
+                            "Format Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+
+                        return;
+                    }
+
+                    TelemetryPacket<int> powerPacket =
+                        new TelemetryPacket<int>(
+                            mac,
+                            deployment,
+                            intValue);
+
+                    response =
+                        await _httpClient.PostAsJsonAsync(
+                            "/api/telemetry/power",
+                            powerPacket);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        UpdateTelemetryVisualization(
+                            intValue.ToString(),
+                            SensorCategory.PowerConsumption);
+
+                        AddTelemetryPoint(
+                            intValue,
+                            SensorCategory.PowerConsumption);
+
+                        EvaluatePowerAnomaly(
+                            intValue);
+                    }
+
+                    break;
+
+
+                // ------------------------------------------------
+                // ACTUATOR
+                // ------------------------------------------------
+
+                case 2:
+
+                    category =
+                        SensorCategory.Actuator;
+
+                    if (CmbActuatorState.SelectedItem is not ComboBoxItem actuatorItem)
+                    {
+                        MessageBox.Show(
+                            "Please select an actuator state.",
+                            "Format Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+
+                        return;
+                    }
+
+                    string actuatorState =
+                        actuatorItem.Content?.ToString() ?? string.Empty;
+
+                    bool boolValue =
+                        actuatorState.Equals(
+                            "ON",
+                            StringComparison.OrdinalIgnoreCase);
+
+                    TelemetryPacket<bool> actuatorPacket =
+                        new TelemetryPacket<bool>(
+                            mac,
+                            deployment,
+                            boolValue);
+
+                    response =
+                        await _httpClient.PostAsJsonAsync(
+                            "/api/telemetry/actuator",
+                            actuatorPacket);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        UpdateTelemetryVisualization(
+                            boolValue ? "ON" : "OFF",
+                            SensorCategory.Actuator);
+
+                        AddTelemetryPoint(
+                            boolValue ? 1 : 0,
+                            SensorCategory.Actuator);
+                    }
+
+                    break;
+
+
+                default:
+
                     MessageBox.Show(
-                        "Please enter a valid decimal for Environmental data.",
-                        "Format Error");
+                        "Please select a sensor category.",
+                        "Telemetry",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
                     return;
-                }
-
-                var packet =
-                    new TelemetryPacket<float>(
-                        mac,
-                        deploymentRaw,
-                        floatVal);
-
-                EvaluateVisualAnomaly(floatVal);
-
-                response =
-                    await _httpClient.PostAsJsonAsync(
-                        "/api/telemetry/environmental",
-                        packet);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    UpdateTelemetryVisualization(
-                        floatVal.ToString("F2"),
-                        "Environmental");
-
-                    AddTelemetryPoint(floatVal, "Environmental");
-
-                }
             }
 
-            // Power telemetry (int)
-            else if (CmbCategory.SelectedIndex == 1)
+
+            // ----------------------------------------------------
+            // API RESPONSE
+            // ----------------------------------------------------
+
+            if (response != null &&
+                response.IsSuccessStatusCode)
             {
-                if (!int.TryParse(rawValue, out int intVal))
-                {
-                    MessageBox.Show(
-                        "Please enter a whole number for Power Consumption.",
-                        "Format Error");
-                    return;
-                }
-
-                var packet =
-                    new TelemetryPacket<int>(
-                        mac,
-                        deploymentRaw,
-                        intVal);
-
-                response =
-                    await _httpClient.PostAsJsonAsync(
-                        "/api/telemetry/power",
-                        packet);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    UpdateTelemetryVisualization(
-                        intVal.ToString(),
-                        "Power");
-
-                    AddTelemetryPoint(intVal,"Power");
-                }
-            }
-
-            // Actuator telemetry (bool)
-            else if (CmbCategory.SelectedIndex == 2)
-            {
-                if (!bool.TryParse(rawValue, out bool boolVal))
-                {
-                    MessageBox.Show(
-                        "Please enter 'true' or 'false' for Actuator data.",
-                        "Format Error");
-                    return;
-                }
-
-                var packet =
-                    new TelemetryPacket<bool>(
-                        mac,
-                        deploymentRaw,
-                        boolVal);
-
-                response =
-                    await _httpClient.PostAsJsonAsync(
-                        "/api/telemetry/actuator",
-                        packet);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    UpdateTelemetryVisualization(
-                        boolVal ? "ON" : "OFF",
-                        "Actuator");
-
-                    AddTelemetryPoint(
-                        boolVal ? 1 : 0,"Actuator");
-                }
-            }
-
-            // API response handling
-            if (response != null && response.IsSuccessStatusCode)
-            {
-                LogTelemetryFeed(
-                    $"[INGESTED] MAC: {mac} | Value: {rawValue} | Type: {CmbCategory.Text.Split(' ')[0]}");
+                _packetCount++;
 
                 LblPacketCount.Text =
-                    (int.Parse(LblPacketCount.Text) + 1).ToString();
+                    _packetCount.ToString();
+
+                LogTelemetryFeed(
+                    $"[INGESTED] MAC: {mac} | Value: {rawValue} | Type: {category}");
             }
             else
             {
+                SetGatewayStatus(
+                    response != null);
+
                 LogTelemetryFeed(
                     $"[API ERROR] HTTP {response?.StatusCode} received from gateway.");
+
+                MessageBox.Show(
+                    $"The Smart-X API rejected the telemetry packet.\nHTTP Status: {response?.StatusCode}",
+                    "Telemetry Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         }
-        catch (Exception ex)
+        catch
         {
+            SetGatewayStatus(false);
+
             LogTelemetryFeed(
-                $"[CONNECTION ERROR] Failed to push packet: {ex.Message}");
+                "[CONNECTION ERROR] Failed to push telemetry packet.");
+
+            MessageBox.Show(
+                "Could not connect to the Smart-X API.",
+                "Connection Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
-    private async void BtnSeedTelemetry_Click(object sender, RoutedEventArgs e)
+
+
+    // ============================================================
+    // MOCK TELEMETRY SEEDING
+    // ============================================================
+
+    private async void BtnSeedTelemetry_Click(
+        object sender,
+        RoutedEventArgs e)
     {
-        string mac = TxtMacAddress.Text.Trim();
-        string deployment = TxtDeploymentPath.Text.Trim();
+        string mac =
+            TxtMacAddress.Text.Trim();
+
+        string deployment =
+            TxtDeploymentPath.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(mac))
         {
@@ -445,21 +757,31 @@ public partial class SensorDashboardWindow : Window
 
         try
         {
-            Random random = new Random();
+            Random random =
+                new Random();
 
-            int environmentalCount = 100;
-            int powerCount = 100;
-            int actuatorCount = 100;
+            const int environmentalCount = 100;
+            const int powerCount = 100;
+            const int actuatorCount = 100;
 
             int successfulPackets = 0;
 
             LogTelemetryFeed(
                 $"[SEED START] Generating {environmentalCount + powerCount + actuatorCount} mock telemetry packets...");
 
-            // Environmental telemetry
-            for (int i = 0; i < environmentalCount; i++)
+
+            // ----------------------------------------------------
+            // ENVIRONMENTAL
+            // ----------------------------------------------------
+
+            for (
+                int i = 0;
+                i < environmentalCount;
+                i++)
             {
-                float value = 40.0f + (float)(random.NextDouble() * 30.0);
+                float value =
+                    40.0f +
+                    (float)(random.NextDouble() * 30.0);
 
                 TelemetryPacket<float> packet =
                     new TelemetryPacket<float>(
@@ -478,19 +800,28 @@ public partial class SensorDashboardWindow : Window
 
                     UpdateTelemetryVisualization(
                         value.ToString("F2"),
-                        "Environmental");
+                        SensorCategory.Environmental);
 
-                    AddTelemetryPoint(value,"Environmental");
+                    AddTelemetryPoint(
+                        value,
+                        SensorCategory.Environmental);
 
-                    LblPacketCount.Text =
-                        (int.Parse(LblPacketCount.Text) + 1).ToString();
+                    IncrementPacketCount();
                 }
             }
 
-            // Power telemetry
-            for (int i = 0; i < powerCount; i++)
+
+            // ----------------------------------------------------
+            // POWER
+            // ----------------------------------------------------
+
+            for (
+                int i = 0;
+                i < powerCount;
+                i++)
             {
-                int value = random.Next(200, 1001);
+                int value =
+                    random.Next(200, 1001);
 
                 TelemetryPacket<int> packet =
                     new TelemetryPacket<int>(
@@ -509,19 +840,31 @@ public partial class SensorDashboardWindow : Window
 
                     UpdateTelemetryVisualization(
                         value.ToString(),
-                        "Power");
+                        SensorCategory.PowerConsumption);
 
-                    AddTelemetryPoint(value,"power");
+                    // FIX:
+                    // Uses the enum rather than "power"/"Power"
+                    // strings, preventing category mix-ups.
+                    AddTelemetryPoint(
+                        value,
+                        SensorCategory.PowerConsumption);
 
-                    LblPacketCount.Text =
-                        (int.Parse(LblPacketCount.Text) + 1).ToString();
+                    IncrementPacketCount();
                 }
             }
 
-            // Actuator telemetry
-            for (int i = 0; i < actuatorCount; i++)
+
+            // ----------------------------------------------------
+            // ACTUATOR
+            // ----------------------------------------------------
+
+            for (
+                int i = 0;
+                i < actuatorCount;
+                i++)
             {
-                bool value = random.Next(0, 2) == 1;
+                bool value =
+                    random.Next(0, 2) == 1;
 
                 TelemetryPacket<bool> packet =
                     new TelemetryPacket<bool>(
@@ -540,18 +883,17 @@ public partial class SensorDashboardWindow : Window
 
                     UpdateTelemetryVisualization(
                         value ? "ON" : "OFF",
-                        "Actuator");
+                        SensorCategory.Actuator);
 
                     AddTelemetryPoint(
-                        value ? 1 : 0,"Actuator");
+                        value ? 1 : 0,
+                        SensorCategory.Actuator);
 
-                    LblPacketCount.Text =
-                        (int.Parse(LblPacketCount.Text) + 1).ToString();
+                    IncrementPacketCount();
                 }
             }
-            DrawTelemetryChart(
-    _environmentalHistory,
-    "Environmental");
+
+
             LogTelemetryFeed(
                 $"[SEED COMPLETE] Successfully processed {successfulPackets} mock telemetry packets.");
 
@@ -561,63 +903,124 @@ public partial class SensorDashboardWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }
-        catch (Exception ex)
+        catch
         {
             LogTelemetryFeed(
-                $"[SEED ERROR] {ex.Message}");
+                "[SEED ERROR] Mock telemetry generation failed.");
 
             MessageBox.Show(
-                $"Mock telemetry seeding failed.\n\n{ex.Message}",
+                "Mock telemetry seeding failed. Please verify that the Smart-X API is running.",
                 "Mock Telemetry Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
     }
-    private void UpdateTelemetryVisualization(string value, string category)
+
+
+    // ============================================================
+    // DASHBOARD VISUALISATION
+    // ============================================================
+
+    private void UpdateTelemetryVisualization(
+        string value,
+        SensorCategory category)
     {
-        LblCurrentReading.Text = value;
-        LblReadingCategory.Text = category + " telemetry";
-        LblLastUpdate.Text = DateTime.Now.ToString("HH:mm:ss");
+        LblCurrentReading.Text =
+            value;
+
+        LblReadingCategory.Text =
+            GetCategoryDisplayName(category) +
+            " telemetry";
+
+        LblLastUpdate.Text =
+            DateTime.Now.ToString("HH:mm:ss");
     }
 
 
-    private void AddTelemetryPoint(double value, string category)
+    private void AddTelemetryPoint(
+        double value,
+        SensorCategory category)
     {
-        List<double> history;
-
-        if (category == "Environmental")
-        {
-            history = _environmentalHistory;
-        }
-        else if (category == "Power")
-        {
-            history = _powerHistory;
-        }
-        else
-        {
-            history = _actuatorHistory;
-        }
+        List<double> history =
+            GetHistoryCollection(category);
 
         history.Add(value);
 
-        // Keep only the latest 30 readings for the visual chart.
-        if (history.Count > 30)
+        // Keep only the latest 30 readings
+        // for the visual dashboard chart.
+        const int maxChartReadings = 30;
+
+        if (history.Count > maxChartReadings)
         {
             history.RemoveAt(0);
         }
 
-        DrawTelemetryChart(history, category);
+        DrawTelemetryChart(
+            history,
+            category);
     }
+
+
+    private List<double> GetHistoryCollection(
+        SensorCategory category)
+    {
+        return category switch
+        {
+            SensorCategory.Environmental =>
+                _environmentalHistory,
+
+            SensorCategory.PowerConsumption =>
+                _powerHistory,
+
+            SensorCategory.Actuator =>
+                _actuatorHistory,
+
+            _ =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(category))
+        };
+    }
+
+
+    private string GetCategoryDisplayName(
+        SensorCategory category)
+    {
+        return category switch
+        {
+            SensorCategory.Environmental =>
+                "Environmental",
+
+            SensorCategory.PowerConsumption =>
+                "Power",
+
+            SensorCategory.Actuator =>
+                "Actuator",
+
+            _ =>
+                "Unknown"
+        };
+    }
+
+
+    // ============================================================
+    // CUSTOM VISUAL TELEMETRY CHART
+    // ============================================================
+
     private void DrawTelemetryChart(
-    List<double> history,
-    string category)
+        List<double> history,
+        SensorCategory category)
     {
         TelemetryChartCanvas.Children.Clear();
 
-        double width = TelemetryChartCanvas.ActualWidth;
-        double height = TelemetryChartCanvas.ActualHeight;
+        double width =
+            TelemetryChartCanvas.ActualWidth;
 
-        if (width <= 0 || height <= 0 || history.Count == 0)
+        double height =
+            TelemetryChartCanvas.ActualHeight;
+
+        if (width <= 0 ||
+            height <= 0 ||
+            history.Count == 0)
         {
             return;
         }
@@ -625,18 +1028,24 @@ public partial class SensorDashboardWindow : Window
         double minimum;
         double maximum;
 
-        // Give each telemetry category an appropriate scale.
-        if (category == "Actuator")
+
+        // Actuator telemetry is boolean,
+        // so the chart uses a fixed 0-1 scale.
+        if (category ==
+            SensorCategory.Actuator)
         {
             minimum = 0;
             maximum = 1;
         }
         else
         {
-            minimum = history.Min();
-            maximum = history.Max();
+            minimum =
+                history.Min();
 
-            // Prevent a completely flat graph when all values are similar.
+            maximum =
+                history.Max();
+
+            // Prevent a completely flat graph.
             if (Math.Abs(maximum - minimum) < 0.01)
             {
                 minimum -= 1;
@@ -644,47 +1053,72 @@ public partial class SensorDashboardWindow : Window
             }
         }
 
+
         double horizontalStep =
             history.Count > 1
                 ? width / (history.Count - 1)
                 : width;
 
-        for (int i = 0; i < history.Count; i++)
+
+        for (
+            int i = 0;
+            i < history.Count;
+            i++)
         {
-            double value = history[i];
+            double value =
+                history[i];
 
             double normalized =
-                (value - minimum) / (maximum - minimum);
+                (value - minimum) /
+                (maximum - minimum);
 
             normalized =
-                Math.Max(0, Math.Min(1, normalized));
+                Math.Max(
+                    0,
+                    Math.Min(
+                        1,
+                        normalized));
 
             double x =
                 i * horizontalStep;
 
             double y =
-                height - (normalized * height);
+                height -
+                (normalized * height);
 
-            Ellipse point = new Ellipse
-            {
-                Width = 6,
-                Height = 6,
-                Fill = new SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(
-                        32,
-                        201,
-                        151))
-            };
 
-            Canvas.SetLeft(point, x - 3);
-            Canvas.SetTop(point, y - 3);
+            // Draw reading point.
+            Ellipse point =
+                new Ellipse
+                {
+                    Width = 6,
+                    Height = 6,
 
-            TelemetryChartCanvas.Children.Add(point);
+                    Fill =
+                        new SolidColorBrush(
+                            System.Windows.Media.Color.FromRgb(
+                                32,
+                                201,
+                                151))
+                };
 
-            // Connect this point to the previous point.
+            Canvas.SetLeft(
+                point,
+                x - 3);
+
+            Canvas.SetTop(
+                point,
+                y - 3);
+
+            TelemetryChartCanvas.Children.Add(
+                point);
+
+
+            // Connect reading to previous reading.
             if (i > 0)
             {
-                double previousValue = history[i - 1];
+                double previousValue =
+                    history[i - 1];
 
                 double previousNormalized =
                     (previousValue - minimum) /
@@ -693,31 +1127,40 @@ public partial class SensorDashboardWindow : Window
                 previousNormalized =
                     Math.Max(
                         0,
-                        Math.Min(1, previousNormalized));
+                        Math.Min(
+                            1,
+                            previousNormalized));
 
                 double previousX =
-                    (i - 1) * horizontalStep;
+                    (i - 1) *
+                    horizontalStep;
 
                 double previousY =
                     height -
                     (previousNormalized * height);
 
-                Line line = new Line
-                {
-                    X1 = previousX,
-                    Y1 = previousY,
-                    X2 = x,
-                    Y2 = y,
-                    Stroke =
-                        new SolidColorBrush(
-                            System.Windows.Media.Color.FromRgb(
-                                32,
-                                201,
-                                151)),
-                    StrokeThickness = 2
-                };
 
-                // Put the line behind the points.
+                Line line =
+                    new Line
+                    {
+                        X1 = previousX,
+                        Y1 = previousY,
+
+                        X2 = x,
+                        Y2 = y,
+
+                        Stroke =
+                            new SolidColorBrush(
+                                System.Windows.Media.Color.FromRgb(
+                                    32,
+                                    201,
+                                    151)),
+
+                        StrokeThickness = 2
+                    };
+
+
+                // Place line behind the point.
                 TelemetryChartCanvas.Children.Insert(
                     TelemetryChartCanvas.Children.Count - 1,
                     line);
@@ -726,60 +1169,176 @@ public partial class SensorDashboardWindow : Window
     }
 
 
-    private void BtnSimulateAggregation_Click(object sender, RoutedEventArgs e)
+    // ============================================================
+    // OPERATOR OVERLOADING DEMONSTRATION
+    // ============================================================
+
+    private void BtnSimulateAggregation_Click(
+        object sender,
+        RoutedEventArgs e)
     {
-        TelemetryPacket<float> meterA = new TelemetryPacket<float>("00:1B:44:11:3A:01", "Sub-Zone B", 35.2f);
-        TelemetryPacket<float> meterB = new TelemetryPacket<float>("00:1B:44:11:3A:02", "Sub-Zone B", 42.8f);
+        TelemetryPacket<float> meterA =
+            new TelemetryPacket<float>(
+                "00:1B:44:11:3A:01",
+                "Sub-Zone B",
+                35.2f);
 
-        TelemetryPacket<float> aggregatedMeter = meterA + meterB;
+        TelemetryPacket<float> meterB =
+            new TelemetryPacket<float>(
+                "00:1B:44:11:3A:02",
+                "Sub-Zone B",
+                42.8f);
 
-        LogTelemetryFeed($"[OPERATOR OVERLOAD +] Aggregated Load: {meterA.SensorValue} + {meterB.SensorValue} = {aggregatedMeter.SensorValue} (ID: {aggregatedMeter.DeviceMacAddress})");
+        TelemetryPacket<float> aggregatedMeter =
+            meterA + meterB;
+
+        LogTelemetryFeed(
+            $"[OPERATOR OVERLOAD +] Aggregated Load: " +
+            $"{meterA.SensorValue} + " +
+            $"{meterB.SensorValue} = " +
+            $"{aggregatedMeter.SensorValue} " +
+            $"(ID: {aggregatedMeter.DeviceMacAddress})");
     }
 
-    private async void BtnFetchTelemetry_Click(object sender, RoutedEventArgs e)
+
+    // ============================================================
+    // TELEMETRY RETRIEVAL
+    // ============================================================
+
+    private async void BtnFetchTelemetry_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/telemetry/environmental");
+            HttpResponseMessage response =
+                await _httpClient.GetAsync(
+                    "/api/telemetry/environmental");
+
             if (response.IsSuccessStatusCode)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<float>>();
-                int count = data != null ? data.Count : 0;
-                LogTelemetryFeed($"[RETRIEVED] Fetched {count} optimized historical records from gateway API.");
+                List<float>? data =
+                    await response.Content
+                        .ReadFromJsonAsync<List<float>>();
+
+                int count =
+                    data?.Count ?? 0;
+
+                LogTelemetryFeed(
+                    $"[RETRIEVED] Fetched {count} optimized historical records from gateway API.");
             }
             else
             {
-                LogTelemetryFeed($"[API ERROR] HTTP {response.StatusCode} during retrieval.");
+                LogTelemetryFeed(
+                    $"[API ERROR] HTTP {response.StatusCode} during retrieval.");
             }
         }
-        catch (Exception ex)
+        catch
         {
-            LogTelemetryFeed($"[FETCH ERROR] Failed to contact gateway: {ex.Message}");
+            LogTelemetryFeed(
+                "[FETCH ERROR] Failed to contact gateway.");
         }
     }
 
-    
 
-    private void EvaluateVisualAnomaly(float value)
+    // ============================================================
+    // DYNAMIC ENGAGEMENT / ANOMALY DETECTION
+    // ============================================================
+
+    private void EvaluateVisualAnomaly(
+        float value)
     {
-        if (value > 85.0f || value < 10.0f)
+        if (value > 85.0f ||
+            value < 10.0f)
         {
-            LblStatusIndicator.Text = "STATUS: ANOMALOUS SPIKE DETECTED";
-            LblStatusIndicator.Foreground = new SolidColorBrush(Colors.Red);
-            LblAnomalyAlert.Text = $"Threshold exceeded: {value} units!";
-            LblAnomalyAlert.Foreground = new SolidColorBrush(Colors.OrangeRed);
+            LblStatusIndicator.Text =
+                "STATUS: ANOMALOUS SPIKE DETECTED";
+
+            LblStatusIndicator.Foreground =
+                new SolidColorBrush(
+                    Colors.Red);
+
+            LblAnomalyAlert.Text =
+                $"Threshold exceeded: {value} units!";
+
+            LblAnomalyAlert.Foreground =
+                new SolidColorBrush(
+                    Colors.OrangeRed);
         }
         else
         {
-            LblStatusIndicator.Text = "STATUS: NORMAL / OPTIMAL";
-            LblStatusIndicator.Foreground = new SolidColorBrush(Colors.LightGreen);
-            LblAnomalyAlert.Text = "Telemetry within expected baseline";
-            LblAnomalyAlert.Foreground = new SolidColorBrush(Colors.LightGray);
+            LblStatusIndicator.Text =
+                "STATUS: NORMAL / OPTIMAL";
+
+            LblStatusIndicator.Foreground =
+                new SolidColorBrush(
+                    Colors.LightGreen);
+
+            LblAnomalyAlert.Text =
+                "Telemetry within expected baseline";
+
+            LblAnomalyAlert.Foreground =
+                new SolidColorBrush(
+                    Colors.LightGray);
+        }
+    }
+    private void EvaluatePowerAnomaly(int value)
+    {
+        if (value > 8000)
+        {
+            LblStatusIndicator.Text =
+                "STATUS: HIGH POWER CONSUMPTION";
+
+            LblStatusIndicator.Foreground =
+                new SolidColorBrush(
+                    Colors.Red);
+
+            LblAnomalyAlert.Text =
+                $"Power consumption above threshold: {value} units";
+
+            LblAnomalyAlert.Foreground =
+                new SolidColorBrush(
+                    Colors.OrangeRed);
+        }
+        else
+        {
+            LblStatusIndicator.Text =
+                "STATUS: NORMAL / OPTIMAL";
+
+            LblStatusIndicator.Foreground =
+                new SolidColorBrush(
+                    Colors.LightGreen);
+
+            LblAnomalyAlert.Text =
+                "Power consumption within expected baseline";
+
+            LblAnomalyAlert.Foreground =
+                new SolidColorBrush(
+                    Colors.LightGray);
         }
     }
 
-    private void LogTelemetryFeed(string message)
+    // ============================================================
+    // PACKET COUNT
+    // ============================================================
+
+    private void IncrementPacketCount()
     {
-        TxtTelemetryFeed.Text += $"[{DateTime.Now:HH:mm:ss}] {message}\n";
+        _packetCount++;
+
+        LblPacketCount.Text =
+            _packetCount.ToString();
+    }
+
+
+    // ============================================================
+    // TELEMETRY LOG
+    // ============================================================
+
+    private void LogTelemetryFeed(
+        string message)
+    {
+        TxtTelemetryFeed.Text +=
+            $"[{DateTime.Now:HH:mm:ss}] {message}\n";
     }
 }
