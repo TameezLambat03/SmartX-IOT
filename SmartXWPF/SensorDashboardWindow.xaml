@@ -610,24 +610,66 @@
                         <!-- CHART -->
 
                         <Border Grid.Row="1"
-                                Background="#0E1316"
-                                BorderBrush="#263139"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="10"
-                                Margin="0,0,0,10">
+        Background="#0E1316"
+        BorderBrush="#263139"
+        BorderThickness="1"
+        CornerRadius="6"
+        Padding="10"
+        Margin="0,0,0,10">
 
                             <Grid>
 
-                                <TextBlock Text="TELEMETRY TREND"
-                                           Foreground="{StaticResource MutedTextBrush}"
-                                           FontSize="9"
-                                           FontWeight="Bold"/>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- CHART TITLE -->
+
+                                <TextBlock Grid.Row="0"
+                   Text="TELEMETRY TREND"
+                   Foreground="{StaticResource MutedTextBrush}"
+                   FontSize="9"
+                   FontWeight="Bold"/>
+
+                                <!-- GRAPH TYPE BUTTONS -->
+
+                                <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    Margin="0,8,0,8">
+
+                                    <Button x:Name="BtnEnvironmentalGraph"
+                    Content="ENVIRONMENTAL"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Height="30"
+                    Padding="12,0"
+                    Click="BtnEnvironmentalGraph_Click"
+                    Margin="0,0,6,0"/>
+
+                                    <Button x:Name="BtnPowerGraph"
+                    Content="POWER"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Height="30"
+                    Padding="12,0"
+                    Click="BtnPowerGraph_Click"
+                    Margin="0,0,6,0"/>
+
+                                    <Button x:Name="BtnActuatorGraph"
+                    Content="ACTUATOR"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Height="30"
+                    Padding="12,0"
+                    Click="BtnActuatorGraph_Click"/>
+
+                                </StackPanel>
+
+                                <!-- GRAPH -->
 
                                 <Canvas x:Name="TelemetryChartCanvas"
-                                        Margin="0,20,0,0"
-                                        Background="#11171B"
-                                        ClipToBounds="True"/>
+                Grid.Row="2"
+                Background="#11171B"
+                ClipToBounds="True"/>
 
                             </Grid>
 

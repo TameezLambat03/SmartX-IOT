@@ -1,6 +1,45 @@
+# Visual Studio
 .vs/
-bin/
-obj/
 *.user
 *.suo
-App.config
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# Visual Studio generated files
+*.pdb
+*.cache
+*.log
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Test results
+TestResults/
+*.trx
+
+# Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Smart-X generated attachment storage
+SmartXAPI/Attachments/
+
+# Local configuration / secrets
+# Keep the real encryption key out of source control if possible
+appsettings.Development.json

@@ -1,4 +1,5 @@
-﻿using SmartX.Shared.Models;
+﻿using SmartX.Shared.Enums;
+using SmartX.Shared.Models;
 using SmartXWPF.Dashboard;
 using SmartXWPF.Services;
 using System.Configuration;
@@ -13,6 +14,7 @@ public partial class SensorDashboardWindow : Window
 
     public SensorDashboardWindow()
     {
+        //create api service//request happens in ApiService.cs
         InitializeComponent();
 
         string? apiBaseUrl =
@@ -113,5 +115,25 @@ public partial class SensorDashboardWindow : Window
         RoutedEventArgs e)
     {
         _controller.SimulateAggregation();
+    }
+    private void BtnEnvironmentalGraph_Click(
+    object sender,
+    RoutedEventArgs e)
+    {
+        _controller.ShowGraph(SensorCategory.Environmental);
+    }
+
+    private void BtnPowerGraph_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _controller.ShowGraph(SensorCategory.PowerConsumption);
+    }
+
+    private void BtnActuatorGraph_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _controller.ShowGraph(SensorCategory.Actuator);
     }
 }

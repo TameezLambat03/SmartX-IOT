@@ -18,18 +18,21 @@ public class TelemetryIngestionService
     private readonly object _powerLock = new();
     private readonly object _actuatorLock = new();
     private readonly SmartCollection<float> _currentEnvironmentalBuffer = new();
+    //env array
     private readonly float[][] _historicalEnvironmentalBatches =
         new float[MaxHistoricalBatches][];
     private int _environmentalBatchIndex = 0;
     private readonly SmartCollection<float> _optimizedEnvironmentalData = new();
 
     private readonly SmartCollection<int> _currentPowerBuffer = new();
+    //power array
     private readonly int[][] _historicalPowerBatches =
         new int[MaxHistoricalBatches][];
     private int _powerBatchIndex = 0;
     private readonly SmartCollection<int> _optimizedPowerData = new();
 
     private readonly SmartCollection<bool> _currentActuatorBuffer = new();
+    //actuator array
     private readonly bool[][] _historicalActuatorBatches =
         new bool[MaxHistoricalBatches][];
     private int _actuatorBatchIndex = 0;

@@ -39,6 +39,14 @@ public class TelemetryChartService
 
         Draw(history, category);
     }
+    public void ShowHistory(
+    SensorCategory category)
+    {
+        List<double> history =
+            GetHistory(category);
+
+        Draw(history, category);
+    }
 
     private List<double> GetHistory(
         SensorCategory category)

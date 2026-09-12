@@ -32,7 +32,7 @@ public class DeploymentValidationService
 
         return root;
     }
-
+    //recursion
     public bool ValidateDeploymentRecursively(
         DeploymentNode? node,
         int depth = 0)

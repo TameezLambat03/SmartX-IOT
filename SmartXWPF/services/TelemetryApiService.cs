@@ -47,4 +47,22 @@ public class TelemetryApiService
 
         return data ?? new List<float>();
     }
+    public async Task<List<int>> GetPowerAsync()
+    {
+        List<int>? data =
+            await _client.GetFromJsonAsync<List<int>>(
+                "api/telemetry/power");
+
+        return data ?? new List<int>();
+    }
+
+    public async Task<List<bool>> GetActuatorAsync()
+    {
+        List<bool>? data =
+            await _client.GetFromJsonAsync<List<bool>>(
+                "api/telemetry/actuator");
+
+        return data ?? new List<bool>();
+    }
+
 }

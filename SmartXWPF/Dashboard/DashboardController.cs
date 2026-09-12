@@ -49,6 +49,7 @@ public class DashboardController
     public async Task InitializeAsync()
     {
         await RefreshSensorsAsync();
+        await LoadHistoricalTelemetryAsync();
     }
 
     public async Task RefreshSensorsAsync()
@@ -107,6 +108,11 @@ public class DashboardController
         int selectedIndex)
     {
         _view.UpdateCategoryControls(selectedIndex);
+    }
+    public void ShowGraph(
+    SensorCategory category)
+    {
+        _chart.ShowHistory(category);
     }
 
     public async Task RegisterSensorAsync()
@@ -630,6 +636,13 @@ public class DashboardController
             var data =
                 await _telemetryApi.GetEnvironmentalAsync();
 
+            foreach (float value in data)
+            {
+                _chart.AddPoint(
+                    value,
+                    SensorCategory.Environmental);
+            }
+
             _view.Log(
                 $"[RETRIEVED] Fetched {data.Count} optimized " +
                 $"historical records from gateway API.");
@@ -688,5 +701,50 @@ public class DashboardController
             "Smart-X",
             System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Warning);
+    }
+    private async Task LoadHistoricalTelemetryAsync()
+    {
+        try
+        {
+            List<float> environmental =
+                await _telemetryApi.GetEnvironmentalAsync();
+
+            foreach (float value in environmental)
+            {
+                _chart.AddPoint(
+                    value,
+                    SensorCategory.Environmental);
+            }
+
+            List<int> power =
+                await _telemetryApi.GetPowerAsync();
+
+            foreach (int value in power)
+            {
+                _chart.AddPoint(
+                    value,
+                    SensorCategory.PowerConsumption);
+            }
+
+            List<bool> actuator =
+                await _telemetryApi.GetActuatorAsync();
+
+            foreach (bool value in actuator)
+            {
+                _chart.AddPoint(
+                    value ? 1 : 0,
+                    SensorCategory.Actuator);
+            }
+
+            _view.Log(
+                $"[HISTORY] Loaded {environmental.Count} environmental, " +
+                $"{power.Count} power and " +
+                $"{actuator.Count} actuator telemetry records.");
+        }
+        catch
+        {
+            _view.Log(
+                "[HISTORY ERROR] Failed to load historical telemetry.");
+        }
     }
 }

@@ -15,9 +15,16 @@ builder.Services.AddSingleton<TelemetryIngestionService>();
 builder.Services.AddSingleton<DeploymentValidationService>();
 builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<AttachmentEncryptionService>();
-
+builder.Services.AddSingleton<StartupSeeder>();
 var app = builder.Build();
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    StartupSeeder seeder =
+        scope.ServiceProvider
+            .GetRequiredService<StartupSeeder>();
 
+    seeder.Seed();
+}
 
 
 // ENVIRONMENTAL TELEMETRY
