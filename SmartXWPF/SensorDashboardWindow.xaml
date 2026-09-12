@@ -400,6 +400,8 @@
                                            TextWrapping="Wrap"
                                            Margin="0,3,0,0"/>
 
+                                  
+
                             </StackPanel>
 
                         </Border>
@@ -450,20 +452,20 @@
                         <!-- ATTACHMENT -->
 
                         <TextBlock Text="DEVICE ARTIFACT"
-                                   Style="{StaticResource FieldLabelStyle}"
-                                   Margin="0,20,0,5"/>
+           Style="{StaticResource FieldLabelStyle}"
+           Margin="0,20,0,5"/>
 
                         <Button x:Name="BtnAttachFile"
-                                Content="ATTACH CONFIG / LOG / PHOTO"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Click="BtnAttachFile_Click"/>
+        Content="ATTACH CONFIG / LOG / PHOTO"
+        Style="{StaticResource SecondaryButtonStyle}"
+        Click="BtnAttachFile_Click"/>
 
                         <TextBlock x:Name="LblAttachedFile"
-                                   Text="No file attached"
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   FontSize="10"
-                                   TextWrapping="Wrap"
-                                   Margin="0,6,0,0"/>
+           Text="No file attached"
+           Foreground="{StaticResource MutedTextBrush}"
+           FontSize="10"
+           TextWrapping="Wrap"
+           Margin="0,6,0,0"/>
 
                         <!-- DEVELOPER TOOLS -->
 

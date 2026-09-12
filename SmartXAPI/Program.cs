@@ -14,6 +14,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton<TelemetryIngestionService>();
 builder.Services.AddSingleton<DeploymentValidationService>();
 builder.Services.AddSingleton<SensorService>();
+builder.Services.AddSingleton<AttachmentEncryptionService>();
 
 var app = builder.Build();
 
@@ -414,7 +415,8 @@ app.MapPost(
     async (
         string macAddress,
         IFormFile file,
-        SensorService sensorService) =>
+        SensorService sensorService,
+AttachmentEncryptionService encryptionService) =>
     {
         if (string.IsNullOrWhiteSpace(macAddress))
         {
@@ -463,11 +465,13 @@ app.MapPost(
                 $"{macAddress.Replace(":", "_")}_{safeFileName}");
 
         await using FileStream stream =
-            new FileStream(
-                savedFilePath,
-                FileMode.Create);
+    new FileStream(
+        savedFilePath,
+        FileMode.Create);
 
-        await file.CopyToAsync(stream);
+        await encryptionService.EncryptFileAsync(
+            file.OpenReadStream(),
+            stream);
 
         sensor.AttachmentFileName =
             safeFileName;

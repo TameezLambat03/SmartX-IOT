@@ -72,7 +72,7 @@ public class DashboardView
     }
 
     public void DisplaySelectedSensor(
-        SensorProfile sensor)
+     SensorProfile sensor)
     {
         Text("LblSelectedSensorMac").Text =
             sensor.DeviceMacAddress;
@@ -83,10 +83,18 @@ public class DashboardView
         Text("LblSelectedSensorLocation").Text =
             sensor.DeploymentLocation;
 
+        Text("LblAttachedFile").Text =
+     string.IsNullOrWhiteSpace(sensor.AttachmentFileName)
+         ? "No attachment"
+         : $"Attached to selected sensor: {sensor.AttachmentFileName}";
+
         ComboBox category =
             Combo("CmbCategory");
 
-        TextBox value =
+        
+    
+
+    TextBox value =
             Input("TxtSensorValue");
 
         ComboBox actuator =
