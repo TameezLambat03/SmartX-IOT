@@ -41,5 +41,5 @@ Desktop.ini
 SmartXAPI/Attachments/
 
 # Local configuration / secrets
-# Keep the real encryption key out of source control if possible
+# Keep the real encryption key out of source control if possible.
 appsettings.Development.json
