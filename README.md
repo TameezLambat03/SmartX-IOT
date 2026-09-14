@@ -576,7 +576,27 @@ Smart-X encrypts uploaded device artifacts using AES-GCM.
 
 The API requires a **256-bit (32-byte) encryption key in Base64 format**.
 
-Generate a secure key with PowerShell:
+### Create `appsettings.json`
+
+Because `appsettings.json` contains configuration that may include sensitive information, it is excluded from source control.
+
+After cloning the repository, create a new file named:
+
+```text
+SmartXAPI/appsettings.json
+```
+
+Add the following structure:
+
+```json
+{
+  "AttachmentEncryptionKey": "YOUR_GENERATED_BASE64_KEY"
+}
+```
+
+### Generate the Encryption Key
+
+Generate a secure 32-byte key with PowerShell:
 
 ```powershell
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
@@ -590,23 +610,28 @@ $rng.Dispose()
 [Convert]::ToBase64String($bytes)
 ```
 
-Copy the resulting Base64 string into the API's local configuration using the `AttachmentEncryptionKey` setting.
+Copy the resulting Base64 string and replace:
+
+```text
+YOUR_GENERATED_BASE64_KEY
+```
+
+with the generated value.
 
 For example:
 
 ```json
 {
-  "AttachmentEncryptionKey": "YOUR_GENERATED_BASE64_KEY"
+  "AttachmentEncryptionKey": "GENERATED_KEY_GOES_HERE"
 }
 ```
 
-### Security Note
+The generated key must decode to exactly **32 bytes (256 bits)**.
 
-**Do not publish or commit a real encryption key to a public repository.**
-
-For local development, keep the real key in an appropriate local configuration or secret-management mechanism that is excluded from source control.
+**Security note:** Do not commit or publish your `appsettings.json` file if it contains a real encryption key. The file is intentionally excluded from source control, so each developer should create their own local configuration file and generate their own encryption key.
 
 If the encryption key is missing, malformed, or is not exactly 32 bytes after Base64 decoding, the API will refuse to start because encrypted attachment storage cannot be initialized safely.
+
 
 ---
 
