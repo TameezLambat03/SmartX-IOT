@@ -218,6 +218,7 @@ public class DashboardController
         }
     }
 
+    //sensory telemetry
     public async Task SubmitTelemetryAsync()
     {
         SensorProfile? sensor =
@@ -232,7 +233,8 @@ public class DashboardController
         try
         {
             bool success;
-
+            //determiens what type of telemetry it is
+            //sends to the related method
             switch (sensor.Category)
             {
                 case SensorCategory.Environmental:

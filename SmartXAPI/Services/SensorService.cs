@@ -5,6 +5,7 @@ namespace SmartXAPI.Services;
 
 public class SensorService
 {
+    //Smart Collection
     private readonly SmartCollection<SensorProfile> _sensors = new();
 
     public SensorProfile RegisterSensor(SensorProfile sensor)
@@ -12,6 +13,7 @@ public class SensorService
         _sensors.Add(sensor);
         return sensor;
     }
+
 
     public IReadOnlyList<SensorProfile> GetAllSensors()
     {

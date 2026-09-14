@@ -25,7 +25,7 @@ public class TelemetryIngestionService
     private readonly SmartCollection<float> _optimizedEnvironmentalData = new();
 
     private readonly SmartCollection<int> _currentPowerBuffer = new();
-    //power array
+    //power array//
     private readonly int[][] _historicalPowerBatches =
         new int[MaxHistoricalBatches][];
     private int _powerBatchIndex = 0;

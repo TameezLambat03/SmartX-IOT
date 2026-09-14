@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace SmartX.Shared.Models;
-
+//The T is a generic type parameter. It allows the same TelemetryPacket class to work with different telemetry types.
 public class TelemetryPacket<T>
 {
     public string DeviceMacAddress { get; set; }
@@ -35,7 +35,7 @@ public class TelemetryPacket<T>
         }
 
         T aggregatedValue;
-
+        //overloading
         if (typeof(T) == typeof(float))
         {
             float result =
