@@ -1,5 +1,4 @@
-﻿
-using SmartX.Shared.Collections;
+﻿using SmartX.Shared.Collections;
 using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
@@ -17,60 +16,76 @@ public class TelemetryIngestionService
     private readonly object _powerLock = new();
     private readonly object _actuatorLock = new();
 
-    // FIFO queues for incoming telemetry packets.
+    // Incoming packets wait here until the background processor handles them.
     private readonly Queue<TelemetryPacket<float>> _environmentalQueue = new();
     private readonly Queue<TelemetryPacket<int>> _powerQueue = new();
     private readonly Queue<TelemetryPacket<bool>> _actuatorQueue = new();
 
-    // Existing environmental storage.
     private readonly SmartCollection<float> _currentEnvironmentalBuffer = new();
     private readonly float[][] _historicalEnvironmentalBatches =
         new float[MaxHistoricalBatches][];
-    private int _environmentalBatchIndex;
+    private int _environmentalBatchIndex = 0;
     private readonly SmartCollection<float> _optimizedEnvironmentalData = new();
 
-    // Existing power storage.
     private readonly SmartCollection<int> _currentPowerBuffer = new();
     private readonly int[][] _historicalPowerBatches =
         new int[MaxHistoricalBatches][];
-    private int _powerBatchIndex;
+    private int _powerBatchIndex = 0;
     private readonly SmartCollection<int> _optimizedPowerData = new();
 
-    // Existing actuator storage.
     private readonly SmartCollection<bool> _currentActuatorBuffer = new();
     private readonly bool[][] _historicalActuatorBatches =
         new bool[MaxHistoricalBatches][];
-    private int _actuatorBatchIndex;
+    private int _actuatorBatchIndex = 0;
     private readonly SmartCollection<bool> _optimizedActuatorData = new();
 
-    private void AddWithLimit<T>(SmartCollection<T> collection, T item)
-    {
-        collection.Add(item);
-
-        if (collection.Count > MaxOptimizedRecords)
-        {
-            collection.Remove(collection[0]);
-        }
-    }
-
-    // ENVIRONMENTAL TELEMETRY
-
+    // These methods enqueue packets only. Processing happens separately.
     public void IngestPacket(TelemetryPacket<float> packet)
     {
         ArgumentNullException.ThrowIfNull(packet);
 
         lock (_environmentalLock)
         {
-            // Add the incoming packet to the FIFO queue.
             _environmentalQueue.Enqueue(packet);
+        }
+    }
 
-            // Process queued packets in arrival order.
+    public void IngestPacket(TelemetryPacket<int> packet)
+    {
+        ArgumentNullException.ThrowIfNull(packet);
+
+        lock (_powerLock)
+        {
+            _powerQueue.Enqueue(packet);
+        }
+    }
+
+    public void IngestPacket(TelemetryPacket<bool> packet)
+    {
+        ArgumentNullException.ThrowIfNull(packet);
+
+        lock (_actuatorLock)
+        {
+            _actuatorQueue.Enqueue(packet);
+        }
+    }
+
+    // Called by the background worker to process waiting packets in FIFO order.
+    public void ProcessQueuedPackets()
+    {
+        ProcessEnvironmentalQueue();
+        ProcessPowerQueue();
+        ProcessActuatorQueue();
+    }
+
+    private void ProcessEnvironmentalQueue()
+    {
+        lock (_environmentalLock)
+        {
             while (_environmentalQueue.Count > 0)
             {
-                TelemetryPacket<float> nextPacket =
-                    _environmentalQueue.Dequeue();
-
-                _currentEnvironmentalBuffer.Add(nextPacket.SensorValue);
+                TelemetryPacket<float> packet = _environmentalQueue.Dequeue();
+                _currentEnvironmentalBuffer.Add(packet.SensorValue);
 
                 if (_currentEnvironmentalBuffer.Count >= BatchSize)
                 {
@@ -80,42 +95,14 @@ public class TelemetryIngestionService
         }
     }
 
-    private void ProcessEnvironmentalBuffer()
+    private void ProcessPowerQueue()
     {
-        float[] completedBatch =
-            _currentEnvironmentalBuffer.GetAll().ToArray();
-
-        _historicalEnvironmentalBatches[_environmentalBatchIndex] =
-            completedBatch;
-
-        _environmentalBatchIndex =
-            (_environmentalBatchIndex + 1) %
-            _historicalEnvironmentalBatches.Length;
-
-        foreach (float value in completedBatch)
-        {
-            AddWithLimit(_optimizedEnvironmentalData, value);
-        }
-
-        _currentEnvironmentalBuffer.Clear();
-    }
-
-    // POWER TELEMETRY
-
-    public void IngestPacket(TelemetryPacket<int> packet)
-    {
-        ArgumentNullException.ThrowIfNull(packet);
-
         lock (_powerLock)
         {
-            _powerQueue.Enqueue(packet);
-
             while (_powerQueue.Count > 0)
             {
-                TelemetryPacket<int> nextPacket =
-                    _powerQueue.Dequeue();
-
-                _currentPowerBuffer.Add(nextPacket.SensorValue);
+                TelemetryPacket<int> packet = _powerQueue.Dequeue();
+                _currentPowerBuffer.Add(packet.SensorValue);
 
                 if (_currentPowerBuffer.Count >= BatchSize)
                 {
@@ -125,42 +112,14 @@ public class TelemetryIngestionService
         }
     }
 
-    private void ProcessPowerBuffer()
+    private void ProcessActuatorQueue()
     {
-        int[] completedBatch =
-            _currentPowerBuffer.GetAll().ToArray();
-
-        _historicalPowerBatches[_powerBatchIndex] =
-            completedBatch;
-
-        _powerBatchIndex =
-            (_powerBatchIndex + 1) %
-            _historicalPowerBatches.Length;
-
-        foreach (int value in completedBatch)
-        {
-            AddWithLimit(_optimizedPowerData, value);
-        }
-
-        _currentPowerBuffer.Clear();
-    }
-
-    // ACTUATOR TELEMETRY
-
-    public void IngestPacket(TelemetryPacket<bool> packet)
-    {
-        ArgumentNullException.ThrowIfNull(packet);
-
         lock (_actuatorLock)
         {
-            _actuatorQueue.Enqueue(packet);
-
             while (_actuatorQueue.Count > 0)
             {
-                TelemetryPacket<bool> nextPacket =
-                    _actuatorQueue.Dequeue();
-
-                _currentActuatorBuffer.Add(nextPacket.SensorValue);
+                TelemetryPacket<bool> packet = _actuatorQueue.Dequeue();
+                _currentActuatorBuffer.Add(packet.SensorValue);
 
                 if (_currentActuatorBuffer.Count >= BatchSize)
                 {
@@ -170,17 +129,45 @@ public class TelemetryIngestionService
         }
     }
 
+    private void ProcessEnvironmentalBuffer()
+    {
+        float[] completedBatch = _currentEnvironmentalBuffer.GetAll().ToArray();
+
+        _historicalEnvironmentalBatches[_environmentalBatchIndex] = completedBatch;
+        _environmentalBatchIndex =
+            (_environmentalBatchIndex + 1) % _historicalEnvironmentalBatches.Length;
+
+        foreach (float value in completedBatch)
+        {
+            AddWithLimit(_optimizedEnvironmentalData, value);
+        }
+
+        _currentEnvironmentalBuffer.Clear();
+    }
+
+    private void ProcessPowerBuffer()
+    {
+        int[] completedBatch = _currentPowerBuffer.GetAll().ToArray();
+
+        _historicalPowerBatches[_powerBatchIndex] = completedBatch;
+        _powerBatchIndex =
+            (_powerBatchIndex + 1) % _historicalPowerBatches.Length;
+
+        foreach (int value in completedBatch)
+        {
+            AddWithLimit(_optimizedPowerData, value);
+        }
+
+        _currentPowerBuffer.Clear();
+    }
+
     private void ProcessActuatorBuffer()
     {
-        bool[] completedBatch =
-            _currentActuatorBuffer.GetAll().ToArray();
+        bool[] completedBatch = _currentActuatorBuffer.GetAll().ToArray();
 
-        _historicalActuatorBatches[_actuatorBatchIndex] =
-            completedBatch;
-
+        _historicalActuatorBatches[_actuatorBatchIndex] = completedBatch;
         _actuatorBatchIndex =
-            (_actuatorBatchIndex + 1) %
-            _historicalActuatorBatches.Length;
+            (_actuatorBatchIndex + 1) % _historicalActuatorBatches.Length;
 
         foreach (bool value in completedBatch)
         {
@@ -190,7 +177,15 @@ public class TelemetryIngestionService
         _currentActuatorBuffer.Clear();
     }
 
-    // RETRIEVAL
+    private static void AddWithLimit<T>(SmartCollection<T> collection, T item)
+    {
+        collection.Add(item);
+
+        if (collection.Count > MaxOptimizedRecords)
+        {
+            collection.Remove(collection[0]);
+        }
+    }
 
     public int GetTotalOptimizedEnvironmentalRecords()
     {
@@ -239,4 +234,5 @@ public class TelemetryIngestionService
             return _optimizedActuatorData.GetAll().ToList();
         }
     }
+
 }

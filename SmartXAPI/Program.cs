@@ -13,6 +13,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddSingleton<TelemetryIngestionService>();
+
+builder.Services.AddHostedService<TelemetryQueueProcessor>();
+
 builder.Services.AddSingleton<DeploymentValidationService>();
 builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<CommandService>();
