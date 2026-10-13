@@ -2,10 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Smart-X | Command Stream and History"
-        Height="720"
-        Width="1100"
-        MinHeight="600"
-        MinWidth="850"
+        Height="780"
+        Width="1150"
+        MinHeight="650"
+        MinWidth="900"
         WindowStartupLocation="CenterScreen"
         Background="#101418">
 
@@ -27,7 +27,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="0,0,0,24">
+        <Grid Grid.Row="0" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -45,7 +45,7 @@
                            FontWeight="SemiBold"
                            Margin="0,6,0,0"/>
 
-                <TextBlock Text="Device control, telemetry alerts and command history"
+                <TextBlock Text="Manual device control and command history"
                            Foreground="#8E9AA3"
                            FontSize="13"
                            Margin="0,6,0,0"/>
@@ -65,13 +65,13 @@
         <!-- Summary cards -->
         <UniformGrid Grid.Row="1"
                      Columns="3"
-                     Margin="0,0,0,20">
+                     Margin="0,0,0,18">
 
             <Border Background="#171D22"
                     BorderBrush="#2B363D"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="16"
+                    Padding="14"
                     Margin="0,0,10,0">
                 <StackPanel>
                     <TextBlock Text="REGISTERED DEVICES"
@@ -81,9 +81,9 @@
                     <TextBlock x:Name="LblDeviceCount"
                                Text="—"
                                Foreground="#F1F5F7"
-                               FontSize="26"
+                               FontSize="25"
                                FontWeight="SemiBold"
-                               Margin="0,8,0,0"/>
+                               Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -91,7 +91,7 @@
                     BorderBrush="#2B363D"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="16"
+                    Padding="14"
                     Margin="5,0">
                 <StackPanel>
                     <TextBlock Text="ACTIVE ALERTS"
@@ -101,9 +101,9 @@
                     <TextBlock x:Name="LblActiveAlerts"
                                Text="0"
                                Foreground="#F59E0B"
-                               FontSize="26"
+                               FontSize="25"
                                FontWeight="SemiBold"
-                               Margin="0,8,0,0"/>
+                               Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -111,7 +111,7 @@
                     BorderBrush="#2B363D"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="16"
+                    Padding="14"
                     Margin="10,0,0,0">
                 <StackPanel>
                     <TextBlock Text="COMMANDS ISSUED"
@@ -121,102 +121,251 @@
                     <TextBlock x:Name="LblCommandCount"
                                Text="0"
                                Foreground="#20C997"
-                               FontSize="26"
+                               FontSize="25"
                                FontWeight="SemiBold"
-                               Margin="0,8,0,0"/>
+                               Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
 
-        <!-- Registered devices -->
-        <Border Grid.Row="2"
-                Background="#171D22"
-                BorderBrush="#2B363D"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="20">
+        <!-- Main dashboard -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.9*"/>
+                <ColumnDefinition Width="1.4*"/>
+            </Grid.ColumnDefinitions>
 
-            <Grid>
+            <!-- Manual command panel -->
+            <Border Grid.Column="0"
+                    Background="#171D22"
+                    BorderBrush="#2B363D"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="18"
+                    Margin="0,0,10,0">
+
+                <StackPanel>
+                    <TextBlock Text="MANUAL OVERRIDE"
+                               Foreground="#20C997"
+                               FontSize="12"
+                               FontWeight="Bold"/>
+
+                    <TextBlock Text="Select a registered actuator"
+                               Foreground="#8E9AA3"
+                               FontSize="13"
+                               Margin="0,6,0,12"/>
+
+                    <ComboBox x:Name="CmbActuators"
+          SelectionChanged="CmbActuators_SelectionChanged"
+          DisplayMemberPath="DeviceMacAddress"
+          Background="#FFFFFF"
+          Foreground="#1F2937"
+          BorderBrush="#64748B"
+          Padding="8"
+          FontSize="14">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="Foreground" Value="#1F2937"/>
+                                <Setter Property="Background" Value="#FFFFFF"/>
+                                <Setter Property="Padding" Value="8,6"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsHighlighted" Value="True">
+                                        <Setter Property="Background" Value="#DBEAFE"/>
+                                        <Setter Property="Foreground" Value="#1E3A8A"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+
+                    <TextBlock Text="Deployment location"
+                               Foreground="#8E9AA3"
+                               FontSize="12"
+                               Margin="0,16,0,6"/>
+
+                    <TextBlock x:Name="LblSelectedLocation"
+                               Text="No actuator selected"
+                               Foreground="#F1F5F7"
+                               FontSize="13"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="SIMULATED DEVICE STATE"
+                               Foreground="#8E9AA3"
+                               FontSize="11"
+                               Margin="0,22,0,8"/>
+
+                    <TextBlock x:Name="LblDeviceState"
+                               Text="Unknown"
+                               Foreground="#F59E0B"
+                               FontSize="22"
+                               FontWeight="SemiBold"/>
+
+                    <Grid Margin="0,18,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnTurnOn"
+                                Grid.Column="0"
+                                Content="TURN ON"
+                                Click="BtnTurnOn_Click"
+                                Height="42"
+                                Margin="0,0,5,0"
+                                Background="#19362F"
+                                Foreground="#20C997"
+                                BorderBrush="#245C4D"
+                                FontWeight="Bold"
+                                Cursor="Hand"
+                                IsEnabled="False"/>
+
+                        <Button x:Name="BtnTurnOff"
+                                Grid.Column="1"
+                                Content="TURN OFF"
+                                Click="BtnTurnOff_Click"
+                                Height="42"
+                                Margin="5,0,0,0"
+                                Background="#382124"
+                                Foreground="#FF7B84"
+                                BorderBrush="#63343A"
+                                FontWeight="Bold"
+                                Cursor="Hand"
+                                IsEnabled="False"/>
+                    </Grid>
+
+                    <Button Content="REFRESH DEVICES AND HISTORY"
+                            Click="BtnRefreshAll_Click"
+                            Height="36"
+                            Margin="0,14,0,0"
+                            Background="#20282D"
+                            Foreground="#F1F5F7"
+                            BorderBrush="#354149"
+                            Cursor="Hand"/>
+
+                    <TextBlock x:Name="LblCommandStatus"
+                               Text="Select an actuator to begin."
+                               Foreground="#8E9AA3"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Registered devices and command history -->
+            <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="0.85*"/>
+                    <RowDefinition Height="1.15*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Device list heading and refresh button -->
-                <Grid Grid.Row="0" Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <!-- Registered devices -->
+                <Border Grid.Row="0"
+                        Background="#171D22"
+                        BorderBrush="#2B363D"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14"
+                        Margin="0,0,0,8">
 
-                    <StackPanel>
-                        <TextBlock Text="REGISTERED DEVICES"
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Text="REGISTERED DEVICES"
                                    Foreground="#20C997"
                                    FontSize="12"
-                                   FontWeight="Bold"/>
+                                   FontWeight="Bold"
+                                   Margin="0,0,0,10"/>
 
-                        <TextBlock Text="Devices retrieved from the Smart-X API"
-                                   Foreground="#8E9AA3"
-                                   FontSize="13"
-                                   Margin="0,5,0,0"/>
-                    </StackPanel>
+                        <ListView Grid.Row="1"
+                                  x:Name="LstDevices"
+                                  Background="#171D22"
+                                  Foreground="#F1F5F7"
+                                  BorderBrush="#2B363D"
+                                  BorderThickness="1"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
 
-                    <Button Grid.Column="1"
-                            Content="↻ REFRESH"
-                            Click="BtnRefreshDevices_Click"
-                            Padding="14,8"
-                            VerticalAlignment="Center"
-                            Background="#19362F"
-                            Foreground="#20C997"
-                            BorderBrush="#245C4D"
-                            Cursor="Hand"/>
-                </Grid>
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="MAC ADDRESS"
+                                                    Width="175"
+                                                    DisplayMemberBinding="{Binding DeviceMacAddress}"/>
 
-                <!-- API connection status -->
-                <TextBlock Grid.Row="1"
-                           x:Name="LblConnectionStatus"
-                           Text="Connecting to the Smart-X API..."
-                           Foreground="#8E9AA3"
-                           FontSize="12"
-                           Margin="0,0,0,12"
-                           TextWrapping="Wrap"/>
+                                    <GridViewColumn Header="CATEGORY"
+                                                    Width="145"
+                                                    DisplayMemberBinding="{Binding Category}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Grid>
+                </Border>
 
-                <!-- Device table -->
-                <ListView Grid.Row="2"
-                          x:Name="LstDevices"
-                          Background="#171D22"
-                          Foreground="#F1F5F7"
-                          BorderBrush="#2B363D"
-                          BorderThickness="1"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <!-- Command history -->
+                <Border Grid.Row="1"
+                        Background="#171D22"
+                        BorderBrush="#2B363D"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14"
+                        Margin="0,8,0,0">
 
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="DEVICE MAC ADDRESS"
-                                            Width="220"
-                                            DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                            <GridViewColumn Header="CATEGORY"
-                                            Width="200"
-                                            DisplayMemberBinding="{Binding Category}"/>
+                        <TextBlock Grid.Row="0"
+                                   Text="COMMAND HISTORY"
+                                   Foreground="#20C997"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Margin="0,0,0,10"/>
 
-                            <GridViewColumn Header="DEPLOYMENT LOCATION"
-                                            Width="400"
-                                            DisplayMemberBinding="{Binding DeploymentLocation}"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+                        <ListView Grid.Row="1"
+                                  x:Name="LstCommandHistory"
+                                  Background="#171D22"
+                                  Foreground="#F1F5F7"
+                                  BorderBrush="#2B363D"
+                                  BorderThickness="1"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="DEVICE"
+                                                    Width="145"
+                                                    DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+
+                                    <GridViewColumn Header="COMMAND"
+                                                    Width="85"
+                                                    DisplayMemberBinding="{Binding Command}"/>
+
+                                    <GridViewColumn Header="TIMESTAMP (UTC)"
+                                                    Width="175"
+                                                    DisplayMemberBinding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"/>
+
+                                    <GridViewColumn Header="STATUS"
+                                                    Width="170"
+                                                    DisplayMemberBinding="{Binding Status}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Grid>
+                </Border>
             </Grid>
-        </Border>
+        </Grid>
 
         <!-- Footer -->
         <TextBlock Grid.Row="3"
                    Text="SMART-X IOT MANAGEMENT PLATFORM"
                    Foreground="#65717A"
                    FontSize="10"
-                   Margin="0,16,0,0"
+                   Margin="0,14,0,0"
                    HorizontalAlignment="Center"/>
     </Grid>
 </Window>
