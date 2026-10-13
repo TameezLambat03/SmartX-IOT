@@ -9,6 +9,15 @@
         WindowStartupLocation="CenterScreen"
         Background="#101418">
 
+    <Window.Resources>
+        <Style TargetType="{x:Type GridViewColumnHeader}">
+            <Setter Property="Background" Value="#20282D"/>
+            <Setter Property="Foreground" Value="#8E9AA3"/>
+            <Setter Property="Padding" Value="10,12"/>
+            <Setter Property="BorderBrush" Value="#2B363D"/>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -68,6 +77,7 @@
                     <TextBlock Text="REGISTERED DEVICES"
                                Foreground="#8E9AA3"
                                FontSize="11"/>
+
                     <TextBlock x:Name="LblDeviceCount"
                                Text="—"
                                Foreground="#F1F5F7"
@@ -87,6 +97,7 @@
                     <TextBlock Text="ACTIVE ALERTS"
                                Foreground="#8E9AA3"
                                FontSize="11"/>
+
                     <TextBlock x:Name="LblActiveAlerts"
                                Text="0"
                                Foreground="#F59E0B"
@@ -106,6 +117,7 @@
                     <TextBlock Text="COMMANDS ISSUED"
                                Foreground="#8E9AA3"
                                FontSize="11"/>
+
                     <TextBlock x:Name="LblCommandCount"
                                Text="0"
                                Foreground="#20C997"
@@ -116,38 +128,87 @@
             </Border>
         </UniformGrid>
 
-        <!-- Initial dashboard content -->
+        <!-- Registered devices -->
         <Border Grid.Row="2"
                 Background="#171D22"
                 BorderBrush="#2B363D"
                 BorderThickness="1"
                 CornerRadius="8"
-                Padding="24">
+                Padding="20">
 
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        MaxWidth="520">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <TextBlock Text="COMMAND CENTRE"
-                           Foreground="#20C997"
-                           FontSize="12"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"/>
+                <!-- Device list heading and refresh button -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Your device command dashboard"
-                           Foreground="#F1F5F7"
-                           FontSize="22"
-                           FontWeight="SemiBold"
-                           TextAlignment="Center"
-                           Margin="0,12,0,0"/>
+                    <StackPanel>
+                        <TextBlock Text="REGISTERED DEVICES"
+                                   Foreground="#20C997"
+                                   FontSize="12"
+                                   FontWeight="Bold"/>
 
-                <TextBlock Text="The dashboard layout is ready. Device data, priority alerts, manual overrides, command history and automated insights will be connected in the following implementation stages."
+                        <TextBlock Text="Devices retrieved from the Smart-X API"
+                                   Foreground="#8E9AA3"
+                                   FontSize="13"
+                                   Margin="0,5,0,0"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Content="↻ REFRESH"
+                            Click="BtnRefreshDevices_Click"
+                            Padding="14,8"
+                            VerticalAlignment="Center"
+                            Background="#19362F"
+                            Foreground="#20C997"
+                            BorderBrush="#245C4D"
+                            Cursor="Hand"/>
+                </Grid>
+
+                <!-- API connection status -->
+                <TextBlock Grid.Row="1"
+                           x:Name="LblConnectionStatus"
+                           Text="Connecting to the Smart-X API..."
                            Foreground="#8E9AA3"
-                           FontSize="14"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center"
-                           Margin="0,12,0,0"/>
-            </StackPanel>
+                           FontSize="12"
+                           Margin="0,0,0,12"
+                           TextWrapping="Wrap"/>
+
+                <!-- Device table -->
+                <ListView Grid.Row="2"
+                          x:Name="LstDevices"
+                          Background="#171D22"
+                          Foreground="#F1F5F7"
+                          BorderBrush="#2B363D"
+                          BorderThickness="1"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="DEVICE MAC ADDRESS"
+                                            Width="220"
+                                            DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+
+                            <GridViewColumn Header="CATEGORY"
+                                            Width="200"
+                                            DisplayMemberBinding="{Binding Category}"/>
+
+                            <GridViewColumn Header="DEPLOYMENT LOCATION"
+                                            Width="400"
+                                            DisplayMemberBinding="{Binding DeploymentLocation}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
         </Border>
 
         <!-- Footer -->

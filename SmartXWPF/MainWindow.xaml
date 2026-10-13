@@ -380,7 +380,7 @@
                        FontWeight="Bold"
                        VerticalAlignment="Center"/>
 
-            <TextBlock Text="ARCHITECTURE STATUS: 1 / 3 ACTIVE"
+            <TextBlock Text="ARCHITECTURE STATUS: 2 / 3 ACTIVE"
                        Foreground="{StaticResource AccentBrush}"
                        FontSize="9"
                        FontWeight="Bold"
