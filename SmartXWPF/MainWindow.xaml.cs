@@ -26,6 +26,15 @@ namespace SmartXWPF
             dashboard.Show();
             this.Close();
         }
+        //command dashboard
+        private void BtnCommandDashboard_Click(object sender, RoutedEventArgs e)
+        {
+            CommandDashboardWindow dashboard = new CommandDashboardWindow();
+
+
+            dashboard.Show();
+            this.Close();
+        }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {

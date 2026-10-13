@@ -1,0 +1,161 @@
+﻿<Window x:Class="SmartXWPF.CommandDashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Smart-X | Command Stream and History"
+        Height="720"
+        Width="1100"
+        MinHeight="600"
+        MinWidth="850"
+        WindowStartupLocation="CenterScreen"
+        Background="#101418">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="SMART-X"
+                           Foreground="#20C997"
+                           FontSize="14"
+                           FontWeight="Bold"/>
+
+                <TextBlock Text="Real-Time Command Stream"
+                           Foreground="#F1F5F7"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           Margin="0,6,0,0"/>
+
+                <TextBlock Text="Device control, telemetry alerts and command history"
+                           Foreground="#8E9AA3"
+                           FontSize="13"
+                           Margin="0,6,0,0"/>
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Content="‹ MAIN MENU"
+                    Click="BtnMainMenu_Click"
+                    Padding="16,10"
+                    VerticalAlignment="Center"
+                    Background="#1D252B"
+                    Foreground="#F1F5F7"
+                    BorderBrush="#2B363D"
+                    Cursor="Hand"/>
+        </Grid>
+
+        <!-- Summary cards -->
+        <UniformGrid Grid.Row="1"
+                     Columns="3"
+                     Margin="0,0,0,20">
+
+            <Border Background="#171D22"
+                    BorderBrush="#2B363D"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="REGISTERED DEVICES"
+                               Foreground="#8E9AA3"
+                               FontSize="11"/>
+                    <TextBlock x:Name="LblDeviceCount"
+                               Text="—"
+                               Foreground="#F1F5F7"
+                               FontSize="26"
+                               FontWeight="SemiBold"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#171D22"
+                    BorderBrush="#2B363D"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="5,0">
+                <StackPanel>
+                    <TextBlock Text="ACTIVE ALERTS"
+                               Foreground="#8E9AA3"
+                               FontSize="11"/>
+                    <TextBlock x:Name="LblActiveAlerts"
+                               Text="0"
+                               Foreground="#F59E0B"
+                               FontSize="26"
+                               FontWeight="SemiBold"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#171D22"
+                    BorderBrush="#2B363D"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="10,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="COMMANDS ISSUED"
+                               Foreground="#8E9AA3"
+                               FontSize="11"/>
+                    <TextBlock x:Name="LblCommandCount"
+                               Text="0"
+                               Foreground="#20C997"
+                               FontSize="26"
+                               FontWeight="SemiBold"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- Initial dashboard content -->
+        <Border Grid.Row="2"
+                Background="#171D22"
+                BorderBrush="#2B363D"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="24">
+
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        MaxWidth="520">
+
+                <TextBlock Text="COMMAND CENTRE"
+                           Foreground="#20C997"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock Text="Your device command dashboard"
+                           Foreground="#F1F5F7"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           Margin="0,12,0,0"/>
+
+                <TextBlock Text="The dashboard layout is ready. Device data, priority alerts, manual overrides, command history and automated insights will be connected in the following implementation stages."
+                           Foreground="#8E9AA3"
+                           FontSize="14"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Margin="0,12,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Footer -->
+        <TextBlock Grid.Row="3"
+                   Text="SMART-X IOT MANAGEMENT PLATFORM"
+                   Foreground="#65717A"
+                   FontSize="10"
+                   Margin="0,16,0,0"
+                   HorizontalAlignment="Center"/>
+    </Grid>
+</Window>
