@@ -1,46 +1,49 @@
-﻿using SmartX.Shared.Collections;
+﻿
+using SmartX.Shared.Collections;
 using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-namespace SmartXAPI.Services;
 
+namespace SmartXAPI.Services;
 
 public class TelemetryIngestionService
 {
-    
-
     private const int BatchSize = 5;
     private const int MaxHistoricalBatches = 10;
     private const int MaxOptimizedRecords = 500;
+
     private readonly object _environmentalLock = new();
     private readonly object _powerLock = new();
     private readonly object _actuatorLock = new();
+
+    // FIFO queues for incoming telemetry packets.
+    private readonly Queue<TelemetryPacket<float>> _environmentalQueue = new();
+    private readonly Queue<TelemetryPacket<int>> _powerQueue = new();
+    private readonly Queue<TelemetryPacket<bool>> _actuatorQueue = new();
+
+    // Existing environmental storage.
     private readonly SmartCollection<float> _currentEnvironmentalBuffer = new();
-    //env array
     private readonly float[][] _historicalEnvironmentalBatches =
         new float[MaxHistoricalBatches][];
-    private int _environmentalBatchIndex = 0;
+    private int _environmentalBatchIndex;
     private readonly SmartCollection<float> _optimizedEnvironmentalData = new();
 
+    // Existing power storage.
     private readonly SmartCollection<int> _currentPowerBuffer = new();
-    //power array//
     private readonly int[][] _historicalPowerBatches =
         new int[MaxHistoricalBatches][];
-    private int _powerBatchIndex = 0;
+    private int _powerBatchIndex;
     private readonly SmartCollection<int> _optimizedPowerData = new();
 
+    // Existing actuator storage.
     private readonly SmartCollection<bool> _currentActuatorBuffer = new();
-    //actuator array
     private readonly bool[][] _historicalActuatorBatches =
         new bool[MaxHistoricalBatches][];
-    private int _actuatorBatchIndex = 0;
+    private int _actuatorBatchIndex;
     private readonly SmartCollection<bool> _optimizedActuatorData = new();
 
-    private void AddWithLimit<T>(
-    SmartCollection<T> collection,
-    T item)
+    private void AddWithLimit<T>(SmartCollection<T> collection, T item)
     {
         collection.Add(item);
 
@@ -52,18 +55,27 @@ public class TelemetryIngestionService
 
     // ENVIRONMENTAL TELEMETRY
 
-
     public void IngestPacket(TelemetryPacket<float> packet)
     {
         ArgumentNullException.ThrowIfNull(packet);
 
         lock (_environmentalLock)
         {
-            _currentEnvironmentalBuffer.Add(packet.SensorValue);
+            // Add the incoming packet to the FIFO queue.
+            _environmentalQueue.Enqueue(packet);
 
-            if (_currentEnvironmentalBuffer.Count >= BatchSize)
+            // Process queued packets in arrival order.
+            while (_environmentalQueue.Count > 0)
             {
-                ProcessEnvironmentalBuffer();
+                TelemetryPacket<float> nextPacket =
+                    _environmentalQueue.Dequeue();
+
+                _currentEnvironmentalBuffer.Add(nextPacket.SensorValue);
+
+                if (_currentEnvironmentalBuffer.Count >= BatchSize)
+                {
+                    ProcessEnvironmentalBuffer();
+                }
             }
         }
     }
@@ -73,8 +85,6 @@ public class TelemetryIngestionService
         float[] completedBatch =
             _currentEnvironmentalBuffer.GetAll().ToArray();
 
-        // Store the completed batch in the historical jagged array.
-        // The index wraps around when the array is full.
         _historicalEnvironmentalBatches[_environmentalBatchIndex] =
             completedBatch;
 
@@ -82,24 +92,15 @@ public class TelemetryIngestionService
             (_environmentalBatchIndex + 1) %
             _historicalEnvironmentalBatches.Length;
 
-        // Move the completed batch into the optimized collection.
-        for (int i = 0; i < completedBatch.Length; i++)
+        foreach (float value in completedBatch)
         {
-            AddWithLimit(
-    _optimizedEnvironmentalData,
-    completedBatch[i]);
+            AddWithLimit(_optimizedEnvironmentalData, value);
         }
 
-        // Clear the temporary buffer for the next batch.
         _currentEnvironmentalBuffer.Clear();
     }
 
-
-
-
-
     // POWER TELEMETRY
-
 
     public void IngestPacket(TelemetryPacket<int> packet)
     {
@@ -107,11 +108,19 @@ public class TelemetryIngestionService
 
         lock (_powerLock)
         {
-            _currentPowerBuffer.Add(packet.SensorValue);
+            _powerQueue.Enqueue(packet);
 
-            if (_currentPowerBuffer.Count >= BatchSize)
+            while (_powerQueue.Count > 0)
             {
-                ProcessPowerBuffer();
+                TelemetryPacket<int> nextPacket =
+                    _powerQueue.Dequeue();
+
+                _currentPowerBuffer.Add(nextPacket.SensorValue);
+
+                if (_currentPowerBuffer.Count >= BatchSize)
+                {
+                    ProcessPowerBuffer();
+                }
             }
         }
     }
@@ -121,8 +130,6 @@ public class TelemetryIngestionService
         int[] completedBatch =
             _currentPowerBuffer.GetAll().ToArray();
 
-        // Store the completed batch in the historical jagged array.
-        // The index wraps around when the array is full.
         _historicalPowerBatches[_powerBatchIndex] =
             completedBatch;
 
@@ -130,24 +137,15 @@ public class TelemetryIngestionService
             (_powerBatchIndex + 1) %
             _historicalPowerBatches.Length;
 
-        // Move the completed batch into the optimized collection.
-        for (int i = 0; i < completedBatch.Length; i++)
+        foreach (int value in completedBatch)
         {
-            AddWithLimit(
-    _optimizedPowerData,
-    completedBatch[i]);
+            AddWithLimit(_optimizedPowerData, value);
         }
 
-        // Clear the temporary buffer for the next batch.
         _currentPowerBuffer.Clear();
     }
 
-
-
-
-
     // ACTUATOR TELEMETRY
-
 
     public void IngestPacket(TelemetryPacket<bool> packet)
     {
@@ -155,21 +153,28 @@ public class TelemetryIngestionService
 
         lock (_actuatorLock)
         {
-            _currentActuatorBuffer.Add(packet.SensorValue);
+            _actuatorQueue.Enqueue(packet);
 
-            if (_currentActuatorBuffer.Count >= BatchSize)
+            while (_actuatorQueue.Count > 0)
             {
-                ProcessActuatorBuffer();
+                TelemetryPacket<bool> nextPacket =
+                    _actuatorQueue.Dequeue();
+
+                _currentActuatorBuffer.Add(nextPacket.SensorValue);
+
+                if (_currentActuatorBuffer.Count >= BatchSize)
+                {
+                    ProcessActuatorBuffer();
+                }
             }
         }
     }
+
     private void ProcessActuatorBuffer()
     {
         bool[] completedBatch =
             _currentActuatorBuffer.GetAll().ToArray();
 
-        // Store the completed batch in the historical jagged array.
-        // The index wraps around when the array is full.
         _historicalActuatorBatches[_actuatorBatchIndex] =
             completedBatch;
 
@@ -177,54 +182,61 @@ public class TelemetryIngestionService
             (_actuatorBatchIndex + 1) %
             _historicalActuatorBatches.Length;
 
-        // Move the completed batch into the optimized collection.
-        for (int i = 0; i < completedBatch.Length; i++)
+        foreach (bool value in completedBatch)
         {
-            AddWithLimit(
-     _optimizedActuatorData,
-     completedBatch[i]);
+            AddWithLimit(_optimizedActuatorData, value);
         }
 
-        // Clear the temporary buffer for the next batch.
         _currentActuatorBuffer.Clear();
     }
-    
 
-    
-
-
-    // ============================
     // RETRIEVAL
-    // ============================
 
     public int GetTotalOptimizedEnvironmentalRecords()
     {
-        return _optimizedEnvironmentalData.Count;
+        lock (_environmentalLock)
+        {
+            return _optimizedEnvironmentalData.Count;
+        }
     }
 
     public int GetTotalOptimizedPowerRecords()
     {
-        return _optimizedPowerData.Count;
+        lock (_powerLock)
+        {
+            return _optimizedPowerData.Count;
+        }
     }
 
     public int GetTotalOptimizedActuatorRecords()
     {
-        return _optimizedActuatorData.Count;
+        lock (_actuatorLock)
+        {
+            return _optimizedActuatorData.Count;
+        }
     }
-
 
     public IReadOnlyList<float> GetEnvironmentalData()
     {
-        return _optimizedEnvironmentalData.GetAll();
+        lock (_environmentalLock)
+        {
+            return _optimizedEnvironmentalData.GetAll().ToList();
+        }
     }
 
     public IReadOnlyList<int> GetPowerData()
     {
-        return _optimizedPowerData.GetAll();
+        lock (_powerLock)
+        {
+            return _optimizedPowerData.GetAll().ToList();
+        }
     }
 
     public IReadOnlyList<bool> GetActuatorData()
     {
-        return _optimizedActuatorData.GetAll();
+        lock (_actuatorLock)
+        {
+            return _optimizedActuatorData.GetAll().ToList();
+        }
     }
 }
