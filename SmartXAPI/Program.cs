@@ -1,7 +1,8 @@
+using Microsoft.AspNetCore.Http.Json;
+using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
 using SmartXAPI.Services;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton<TelemetryIngestionService>();
 builder.Services.AddSingleton<DeploymentValidationService>();
 builder.Services.AddSingleton<SensorService>();
+builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<AttachmentEncryptionService>();
 builder.Services.AddSingleton<StartupSeeder>();
 var app = builder.Build();
@@ -411,6 +413,136 @@ app.MapGet(
         return Results.Ok(
             sensorService.GetAllSensors());
     });
+
+// COMMAND EXECUTION
+
+app.MapPost(
+    "/api/commands",
+    (
+        CommandRequest request,
+        SensorService sensorService,
+        CommandService commandService
+    ) =>
+    {
+        if (request == null)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "Command request is required."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.DeviceMacAddress))
+        {
+            return Results.BadRequest(new
+            {
+                Message = "Device MAC address is required."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Command))
+        {
+            return Results.BadRequest(new
+            {
+                Message = "Command must be ON or OFF."
+            });
+        }
+
+        string macAddress = request.DeviceMacAddress.Trim();
+        string command = request.Command.Trim().ToUpperInvariant();
+
+        if (command != "ON" && command != "OFF")
+        {
+            return Results.BadRequest(new
+            {
+                Message = "Only ON and OFF commands are supported."
+            });
+        }
+
+        SensorProfile? sensor =
+            sensorService.GetSensorByMacAddress(macAddress);
+
+        if (sensor == null)
+        {
+            return Results.NotFound(new
+            {
+                Message = "The specified device is not registered."
+            });
+        }
+
+        if (sensor.Category != SensorCategory.Actuator)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "Commands can only be sent to registered actuator devices."
+            });
+        }
+
+        CommandHistoryEntry entry =
+            commandService.ExecuteCommand(
+                sensor.DeviceMacAddress,
+                command == "ON");
+
+        return Results.Ok(new
+        {
+            Message = $"Simulated {command} command recorded successfully.",
+            Command = entry
+        });
+    });
+
+
+// COMMAND HISTORY
+
+app.MapGet(
+    "/api/commands",
+    (CommandService commandService) =>
+    {
+        return Results.Ok(
+            commandService.GetCommandHistory());
+    });
+
+
+// SIMULATED DEVICE STATE
+
+app.MapGet(
+    "/api/commands/{macAddress}/state",
+    (
+        string macAddress,
+        SensorService sensorService,
+        CommandService commandService
+    ) =>
+    {
+        SensorProfile? sensor =
+            sensorService.GetSensorByMacAddress(macAddress);
+
+        if (sensor == null)
+        {
+            return Results.NotFound(new
+            {
+                Message = "The specified device is not registered."
+            });
+        }
+
+        if (sensor.Category != SensorCategory.Actuator)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "The specified device is not an actuator."
+            });
+        }
+
+        bool? state = commandService.GetDeviceState(macAddress);
+
+        return Results.Ok(new
+        {
+            DeviceMacAddress = macAddress,
+            IsOn = state,
+            State = state.HasValue
+                ? (state.Value ? "ON" : "OFF")
+                : "Unknown - no command issued yet"
+        });
+    });
+
 
 
 
