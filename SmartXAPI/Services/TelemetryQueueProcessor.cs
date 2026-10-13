@@ -7,11 +7,14 @@ namespace SmartXAPI.Services;
 public class TelemetryQueueProcessor : BackgroundService
 {
     private readonly TelemetryIngestionService _telemetryService;
+    private readonly CriticalAlertService _criticalAlertService;
 
     public TelemetryQueueProcessor(
-        TelemetryIngestionService telemetryService)
+        TelemetryIngestionService telemetryService,
+        CriticalAlertService criticalAlertService)
     {
         _telemetryService = telemetryService;
+        _criticalAlertService = criticalAlertService;
     }
 
     protected override async Task ExecuteAsync(
@@ -24,4 +27,5 @@ public class TelemetryQueueProcessor : BackgroundService
             await Task.Delay(100, stoppingToken);
         }
     }
+
 }

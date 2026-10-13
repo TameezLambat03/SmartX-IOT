@@ -16,10 +16,11 @@ public class TelemetryIngestionService
     private readonly object _powerLock = new();
     private readonly object _actuatorLock = new();
 
-    // Incoming packets wait here until the background processor handles them.
     private readonly Queue<TelemetryPacket<float>> _environmentalQueue = new();
     private readonly Queue<TelemetryPacket<int>> _powerQueue = new();
     private readonly Queue<TelemetryPacket<bool>> _actuatorQueue = new();
+
+    private readonly CriticalAlertService _criticalAlertService;
 
     private readonly SmartCollection<float> _currentEnvironmentalBuffer = new();
     private readonly float[][] _historicalEnvironmentalBatches =
@@ -39,7 +40,11 @@ public class TelemetryIngestionService
     private int _actuatorBatchIndex = 0;
     private readonly SmartCollection<bool> _optimizedActuatorData = new();
 
-    // These methods enqueue packets only. Processing happens separately.
+    public TelemetryIngestionService(CriticalAlertService criticalAlertService)
+    {
+        _criticalAlertService = criticalAlertService;
+    }
+
     public void IngestPacket(TelemetryPacket<float> packet)
     {
         ArgumentNullException.ThrowIfNull(packet);
@@ -70,7 +75,6 @@ public class TelemetryIngestionService
         }
     }
 
-    // Called by the background worker to process waiting packets in FIFO order.
     public void ProcessQueuedPackets()
     {
         ProcessEnvironmentalQueue();
@@ -85,6 +89,14 @@ public class TelemetryIngestionService
             while (_environmentalQueue.Count > 0)
             {
                 TelemetryPacket<float> packet = _environmentalQueue.Dequeue();
+
+                // Generate a critical alert for readings below the threshold.
+                _criticalAlertService.CheckEnvironmentalReading(
+                    packet.DeviceMacAddress,
+                    packet.DeploymentLocation,
+                    packet.Timestamp,
+                    packet.SensorValue);
+
                 _currentEnvironmentalBuffer.Add(packet.SensorValue);
 
                 if (_currentEnvironmentalBuffer.Count >= BatchSize)

@@ -13,9 +13,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddSingleton<TelemetryIngestionService>();
-
 builder.Services.AddHostedService<TelemetryQueueProcessor>();
-
+builder.Services.AddSingleton<CriticalAlertService>();
 builder.Services.AddSingleton<DeploymentValidationService>();
 builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<CommandService>();
@@ -310,7 +309,10 @@ app.MapGet(
     });
 
 
-
+app.MapGet("/api/alerts", (CriticalAlertService alertService) =>
+{
+    return Results.Ok(alertService.GetAlerts());
+});
 // SENSOR REGISTRATION
 
 
