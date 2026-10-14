@@ -309,6 +309,33 @@ app.MapGet(
             ingestionService.GetActuatorData());
     });
 
+// TIMESTAMPED TELEMETRY HISTORY
+
+app.MapGet(
+    "/api/telemetry/environmental/history",
+    (TelemetryIngestionService ingestionService) =>
+    {
+        return Results.Ok(
+            ingestionService.GetEnvironmentalTimestampedLogs());
+    });
+
+app.MapGet(
+    "/api/telemetry/power/history",
+    (TelemetryIngestionService ingestionService) =>
+    {
+        return Results.Ok(
+            ingestionService.GetPowerTimestampedLogs());
+    });
+
+app.MapGet(
+    "/api/telemetry/actuator/history",
+    (TelemetryIngestionService ingestionService) =>
+    {
+        return Results.Ok(
+            ingestionService.GetActuatorTimestampedLogs());
+    });
+
+
 
 app.MapGet("/api/alerts", (CriticalAlertService alertService) =>
 {
