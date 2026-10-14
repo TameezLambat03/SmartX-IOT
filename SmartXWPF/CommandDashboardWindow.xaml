@@ -16,6 +16,13 @@
             <Setter Property="Padding" Value="10,12"/>
             <Setter Property="BorderBrush" Value="#2B363D"/>
         </Style>
+
+        <Style TargetType="{x:Type DataGridColumnHeader}">
+            <Setter Property="Background" Value="#20282D"/>
+            <Setter Property="Foreground" Value="#8E9AA3"/>
+            <Setter Property="Padding" Value="8,10"/>
+            <Setter Property="BorderBrush" Value="#2B363D"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="24">
@@ -45,10 +52,11 @@
                            FontWeight="SemiBold"
                            Margin="0,6,0,0"/>
 
-                <TextBlock Text="Manual device control and command history"
+                <TextBlock Text="Manual device control, alerts, recommendations and command history"
                            Foreground="#8E9AA3"
                            FontSize="13"
-                           Margin="0,6,0,0"/>
+                           Margin="0,6,0,0"
+                           TextWrapping="Wrap"/>
             </StackPanel>
 
             <Button Grid.Column="1"
@@ -156,13 +164,13 @@
                                Margin="0,6,0,12"/>
 
                     <ComboBox x:Name="CmbActuators"
-          SelectionChanged="CmbActuators_SelectionChanged"
-          DisplayMemberPath="DeviceMacAddress"
-          Background="#FFFFFF"
-          Foreground="#1F2937"
-          BorderBrush="#64748B"
-          Padding="8"
-          FontSize="14">
+                              SelectionChanged="CmbActuators_SelectionChanged"
+                              DisplayMemberPath="DeviceMacAddress"
+                              Background="#FFFFFF"
+                              Foreground="#1F2937"
+                              BorderBrush="#64748B"
+                              Padding="8"
+                              FontSize="14">
                         <ComboBox.ItemContainerStyle>
                             <Style TargetType="ComboBoxItem">
                                 <Setter Property="Foreground" Value="#1F2937"/>
@@ -233,7 +241,7 @@
                                 IsEnabled="False"/>
                     </Grid>
 
-                    <Button Content="REFRESH DEVICES AND HISTORY"
+                    <Button Content="REFRESH ALL DATA"
                             Click="BtnRefreshAll_Click"
                             Height="36"
                             Margin="0,14,0,0"
@@ -251,113 +259,215 @@
                 </StackPanel>
             </Border>
 
-            <!-- Registered devices and command history -->
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="0.85*"/>
-                    <RowDefinition Height="1.15*"/>
-                </Grid.RowDefinitions>
+            <!-- Devices, history, alerts and recommendations -->
+            <Border Grid.Column="1"
+                    Background="#171D22"
+                    BorderBrush="#2B363D"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="10"
+                    Margin="0,0,0,0">
 
-                <!-- Registered devices -->
-                <Border Grid.Row="0"
-                        Background="#171D22"
-                        BorderBrush="#2B363D"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="14"
-                        Margin="0,0,0,8">
+                <TabControl Background="#171D22"
+                            Foreground="#F1F5F7"
+                            BorderBrush="#2B363D">
 
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                    <!-- Registered devices -->
+                    <TabItem Header="Devices">
+                        <Grid Background="#171D22" Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0"
-                                   Text="REGISTERED DEVICES"
-                                   Foreground="#20C997"
-                                   FontSize="12"
-                                   FontWeight="Bold"
-                                   Margin="0,0,0,10"/>
+                            <TextBlock Grid.Row="0"
+                                       Text="REGISTERED DEVICES"
+                                       Foreground="#20C997"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Margin="0,8,0,10"/>
 
-                        <ListView Grid.Row="1"
-                                  x:Name="LstDevices"
-                                  Background="#171D22"
-                                  Foreground="#F1F5F7"
-                                  BorderBrush="#2B363D"
-                                  BorderThickness="1"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListView Grid.Row="1"
+                                      x:Name="LstDevices"
+                                      Background="#171D22"
+                                      Foreground="#F1F5F7"
+                                      BorderBrush="#2B363D"
+                                      BorderThickness="1"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="MAC ADDRESS"
+                                                        Width="175"
+                                                        DisplayMemberBinding="{Binding DeviceMacAddress}"/>
 
-                            <ListView.View>
-                                <GridView>
-                                    <GridViewColumn Header="MAC ADDRESS"
-                                                    Width="175"
-                                                    DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+                                        <GridViewColumn Header="CATEGORY"
+                                                        Width="145"
+                                                        DisplayMemberBinding="{Binding Category}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </TabItem>
 
-                                    <GridViewColumn Header="CATEGORY"
-                                                    Width="145"
-                                                    DisplayMemberBinding="{Binding Category}"/>
-                                </GridView>
-                            </ListView.View>
-                        </ListView>
-                    </Grid>
-                </Border>
+                    <!-- Command history -->
+                    <TabItem Header="Command History">
+                        <Grid Background="#171D22" Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                <!-- Command history -->
-                <Border Grid.Row="1"
-                        Background="#171D22"
-                        BorderBrush="#2B363D"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="14"
-                        Margin="0,8,0,0">
+                            <TextBlock Grid.Row="0"
+                                       Text="COMMAND HISTORY"
+                                       Foreground="#20C997"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Margin="0,8,0,10"/>
 
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                            <ListView Grid.Row="1"
+                                      x:Name="LstCommandHistory"
+                                      Background="#171D22"
+                                      Foreground="#F1F5F7"
+                                      BorderBrush="#2B363D"
+                                      BorderThickness="1"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="DEVICE"
+                                                        Width="145"
+                                                        DisplayMemberBinding="{Binding DeviceMacAddress}"/>
 
-                        <TextBlock Grid.Row="0"
-                                   Text="COMMAND HISTORY"
-                                   Foreground="#20C997"
-                                   FontSize="12"
-                                   FontWeight="Bold"
-                                   Margin="0,0,0,10"/>
+                                        <GridViewColumn Header="COMMAND"
+                                                        Width="85"
+                                                        DisplayMemberBinding="{Binding Command}"/>
 
-                        <ListView Grid.Row="1"
-                                  x:Name="LstCommandHistory"
-                                  Background="#171D22"
-                                  Foreground="#F1F5F7"
-                                  BorderBrush="#2B363D"
-                                  BorderThickness="1"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <GridViewColumn Header="TIMESTAMP (UTC)"
+                                                        Width="175"
+                                                        DisplayMemberBinding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"/>
 
-                            <ListView.View>
-                                <GridView>
-                                    <GridViewColumn Header="DEVICE"
-                                                    Width="145"
-                                                    DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+                                        <GridViewColumn Header="STATUS"
+                                                        Width="170"
+                                                        DisplayMemberBinding="{Binding Status}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </TabItem>
 
-                                    <GridViewColumn Header="COMMAND"
-                                                    Width="85"
-                                                    DisplayMemberBinding="{Binding Command}"/>
+                    <!-- Alerts -->
+                    <TabItem Header="Alerts">
+                        <Grid Background="#171D22" Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                                    <GridViewColumn Header="TIMESTAMP (UTC)"
-                                                    Width="175"
-                                                    DisplayMemberBinding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"/>
+                            <TextBlock Grid.Row="0"
+                                       Text="ENVIRONMENTAL ALERTS"
+                                       Foreground="#20C997"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Margin="0,8,0,10"/>
 
-                                    <GridViewColumn Header="STATUS"
-                                                    Width="170"
-                                                    DisplayMemberBinding="{Binding Status}"/>
-                                </GridView>
-                            </ListView.View>
-                        </ListView>
-                    </Grid>
-                </Border>
-            </Grid>
+                            <DataGrid Grid.Row="1"
+                                      x:Name="DgAlerts"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      Background="#171D22"
+                                      Foreground="#F1F5F7"
+                                      RowBackground="#171D22"
+                                      AlternatingRowBackground="#20282D"
+                                      BorderBrush="#2B363D"
+                                      GridLinesVisibility="Horizontal"
+                                      HeadersVisibility="Column"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="SEVERITY"
+                                                        Binding="{Binding Severity}"
+                                                        Width="90"/>
+
+                                    <DataGridTextColumn Header="READING"
+                                                        Binding="{Binding SensorValue}"
+                                                        Width="75"/>
+
+                                    <DataGridTextColumn Header="DEVICE"
+                                                        Binding="{Binding DeviceMacAddress}"
+                                                        Width="145"/>
+
+                                    <DataGridTextColumn Header="LOCATION"
+                                                        Binding="{Binding DeploymentLocation}"
+                                                        Width="170"/>
+
+                                    <DataGridTextColumn Header="MESSAGE"
+                                                        Binding="{Binding Message}"
+                                                        Width="200"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Recommendations -->
+                    <TabItem Header="Recommendations">
+                        <Grid Background="#171D22" Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="PREDICTIVE RECOMMENDATIONS"
+                                       Foreground="#20C997"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Margin="0,8,0,10"/>
+
+                            <DataGrid Grid.Row="1"
+                                      x:Name="DgRecommendations"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      Background="#171D22"
+                                      Foreground="#F1F5F7"
+                                      RowBackground="#171D22"
+                                      AlternatingRowBackground="#20282D"
+                                      BorderBrush="#2B363D"
+                                      GridLinesVisibility="Horizontal"
+                                      HeadersVisibility="Column"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="SEVERITY"
+                                                        Binding="{Binding Severity}"
+                                                        Width="90"/>
+
+                                    <DataGridTextColumn Header="READING"
+                                                        Binding="{Binding SensorValue}"
+                                                        Width="75"/>
+
+                                    <DataGridTextColumn Header="DEVICE"
+                                                        Binding="{Binding DeviceMacAddress}"
+                                                        Width="145"/>
+
+                                    <DataGridTextColumn Header="RECOMMENDATION"
+                                                        Binding="{Binding Recommendation}"
+                                                        Width="220"/>
+
+                                    <DataGridTextColumn Header="RECOMMENDED ACTION"
+                                                        Binding="{Binding RecommendedAction}"
+                                                        Width="220"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+
+                </TabControl>
+            </Border>
         </Grid>
 
         <!-- Footer -->

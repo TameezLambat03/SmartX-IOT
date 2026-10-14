@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,6 +17,8 @@ public partial class CommandDashboardWindow : Window
 {
     private readonly SensorApiService _sensorApiService;
     private readonly CommandApiService _commandApiService;
+    private readonly AlertApiService _alertApiService;
+    private readonly RecommendationApiService _recommendationApiService;
 
     private List<SensorProfile> _allSensors = new();
 
@@ -36,6 +37,12 @@ public partial class CommandDashboardWindow : Window
 
         _commandApiService =
             new CommandApiService(apiService);
+
+        _alertApiService =
+            new AlertApiService(apiService);
+
+        _recommendationApiService =
+            new RecommendationApiService(apiService);
 
         Loaded += CommandDashboardWindow_Loaded;
     }
@@ -59,6 +66,8 @@ public partial class CommandDashboardWindow : Window
         await RefreshDevicesAsync();
         await RefreshCommandHistoryAsync();
         await RefreshSelectedDeviceStateAsync();
+        await RefreshAlertsAsync();
+        await RefreshRecommendationsAsync();
     }
 
     private async Task RefreshDevicesAsync()
@@ -78,6 +87,7 @@ public partial class CommandDashboardWindow : Window
                 CmbActuators.ItemsSource = null;
 
                 LblDeviceCount.Text = "—";
+
                 LblCommandStatus.Text =
                     "Could not retrieve devices. Check that the API is running.";
 
@@ -127,6 +137,7 @@ public partial class CommandDashboardWindow : Window
                 sensor.DeploymentLocation;
 
             LblDeviceState.Text = "Loading...";
+
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
 
@@ -242,11 +253,48 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
+    private async Task RefreshAlertsAsync()
+    {
+        try
+        {
+            List<CriticalAlert> alerts =
+                await _alertApiService.GetAlertsAsync();
+
+            DgAlerts.ItemsSource = alerts;
+
+            LblActiveAlerts.Text =
+                alerts.Count.ToString();
+        }
+        catch (Exception ex)
+        {
+            LblCommandStatus.Text =
+                $"Could not load alerts: {ex.Message}";
+        }
+    }
+
+    private async Task RefreshRecommendationsAsync()
+    {
+        try
+        {
+            List<PredictiveRecommendation> recommendations =
+                await _recommendationApiService
+                    .GetRecommendationsAsync();
+
+            DgRecommendations.ItemsSource = recommendations;
+        }
+        catch (Exception ex)
+        {
+            LblCommandStatus.Text =
+                $"Could not load recommendations: {ex.Message}";
+        }
+    }
+
     private async Task RefreshSelectedDeviceStateAsync()
     {
         if (CmbActuators.SelectedItem is not SensorProfile sensor)
         {
             LblDeviceState.Text = "Unknown";
+
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
 
@@ -262,6 +310,7 @@ public partial class CommandDashboardWindow : Window
             if (!result.Success)
             {
                 LblDeviceState.Text = "Unavailable";
+
                 LblDeviceState.Foreground =
                     System.Windows.Media.Brushes.Orange;
 
@@ -280,6 +329,7 @@ public partial class CommandDashboardWindow : Window
         catch (Exception)
         {
             LblDeviceState.Text = "Unavailable";
+
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
         }
