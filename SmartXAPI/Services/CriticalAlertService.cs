@@ -1,4 +1,5 @@
-﻿using SmartX.Shared.Models;
+﻿
+using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,12 +9,12 @@ namespace SmartXAPI.Services;
 public class CriticalAlertService
 {
     private readonly PriorityQueue<CriticalAlert, int> _alertQueue = new();
-
     private readonly object _lock = new();
 
-    // Lower numbers represent higher-priority alerts.
+    // Lower numbers mean higher urgency.
     private const int CriticalPriority = 1;
-    private const float CriticalEnvironmentalThreshold = 20.0f;
+    private const int HighPriority = 2;
+    private const int WarningPriority = 3;
 
     public void CheckEnvironmentalReading(
         string macAddress,
@@ -21,8 +22,29 @@ public class CriticalAlertService
         DateTime timestamp,
         float sensorValue)
     {
-        // Generate an alert when an environmental reading falls below 20.
-        if (sensorValue >= CriticalEnvironmentalThreshold)
+        string severity;
+        string message;
+        int priority;
+
+        if (sensorValue < 10.0f)
+        {
+            severity = "Critical";
+            message = $"Environmental reading is critically low: {sensorValue}";
+            priority = CriticalPriority;
+        }
+        else if (sensorValue < 15.0f)
+        {
+            severity = "High";
+            message = $"Environmental reading is very low: {sensorValue}";
+            priority = HighPriority;
+        }
+        else if (sensorValue < 20.0f)
+        {
+            severity = "Warning";
+            message = $"Environmental reading is below the safe threshold: {sensorValue}";
+            priority = WarningPriority;
+        }
+        else
         {
             return;
         }
@@ -33,13 +55,13 @@ public class CriticalAlertService
             DeploymentLocation = location,
             Timestamp = timestamp,
             SensorValue = sensorValue,
-            Severity = "Critical",
-            Message = $"Environmental reading is critically low: {sensorValue}"
+            Severity = severity,
+            Message = message
         };
 
         lock (_lock)
         {
-            _alertQueue.Enqueue(alert, CriticalPriority);
+            _alertQueue.Enqueue(alert, priority);
         }
     }
 
@@ -47,8 +69,6 @@ public class CriticalAlertService
     {
         lock (_lock)
         {
-            // Return alerts in priority order without removing them
-            // from the actual queue.
             return _alertQueue.UnorderedItems
                 .OrderBy(item => item.Priority)
                 .ThenBy(item => item.Element.Timestamp)
@@ -64,5 +84,4 @@ public class CriticalAlertService
             return _alertQueue.Count;
         }
     }
-
 }

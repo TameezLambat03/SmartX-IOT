@@ -21,7 +21,7 @@ public class TelemetryIngestionService
     private readonly Queue<TelemetryPacket<bool>> _actuatorQueue = new();
 
     private readonly CriticalAlertService _criticalAlertService;
-
+    private readonly PredictiveRecommendationService _recommendationService;
     private readonly SmartCollection<float> _currentEnvironmentalBuffer = new();
     private readonly float[][] _historicalEnvironmentalBatches =
         new float[MaxHistoricalBatches][];
@@ -40,10 +40,15 @@ public class TelemetryIngestionService
     private int _actuatorBatchIndex = 0;
     private readonly SmartCollection<bool> _optimizedActuatorData = new();
 
-    public TelemetryIngestionService(CriticalAlertService criticalAlertService)
+
+    public TelemetryIngestionService(
+        CriticalAlertService criticalAlertService,
+        PredictiveRecommendationService recommendationService)
     {
         _criticalAlertService = criticalAlertService;
+        _recommendationService = recommendationService;
     }
+
 
     public void IngestPacket(TelemetryPacket<float> packet)
     {
@@ -96,8 +101,14 @@ public class TelemetryIngestionService
                     packet.DeploymentLocation,
                     packet.Timestamp,
                     packet.SensorValue);
+                _recommendationService.AnalyseEnvironmentalReading(
+    packet.DeviceMacAddress,
+    packet.DeploymentLocation,
+    packet.Timestamp,
+    packet.SensorValue);
 
                 _currentEnvironmentalBuffer.Add(packet.SensorValue);
+
 
                 if (_currentEnvironmentalBuffer.Count >= BatchSize)
                 {

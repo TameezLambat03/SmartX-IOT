@@ -20,6 +20,7 @@ builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<AttachmentEncryptionService>();
 builder.Services.AddSingleton<StartupSeeder>();
+builder.Services.AddSingleton<PredictiveRecommendationService>();
 var app = builder.Build();
 using (IServiceScope scope = app.Services.CreateScope())
 {
@@ -494,6 +495,11 @@ app.MapPost(
             Command = entry
         });
     });
+app.MapGet("/api/recommendations", (
+    PredictiveRecommendationService recommendationService) =>
+{
+    return Results.Ok(recommendationService.GetRecommendations());
+});
 
 
 // COMMAND HISTORY
