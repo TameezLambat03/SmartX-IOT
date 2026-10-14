@@ -554,6 +554,27 @@ app.MapGet(
         });
     });
 
+app.MapPost(
+    "/api/commands/undo",
+    (CommandService commandService) =>
+    {
+        CommandHistoryEntry? entry =
+            commandService.UndoLastCommand();
+
+        if (entry == null)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "There are no commands available to undo."
+            });
+        }
+
+        return Results.Ok(new
+        {
+            Message = "The last command was undone successfully.",
+            Command = entry
+        });
+    });
 
 
 

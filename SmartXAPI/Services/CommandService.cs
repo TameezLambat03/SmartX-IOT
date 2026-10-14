@@ -12,6 +12,9 @@ public class CommandService
 
     private readonly List<CommandHistoryEntry> _commandHistory = new();
 
+    // Stores the previous state for each manual command.
+    private readonly Stack<UndoEntry> _undoStack = new();
+
     private readonly object _lock = new();
 
     public CommandHistoryEntry ExecuteCommand(
@@ -20,6 +23,17 @@ public class CommandService
     {
         lock (_lock)
         {
+            bool? previousState =
+                _deviceStates.TryGetValue(macAddress, out bool state)
+                    ? state
+                    : null;
+
+            _undoStack.Push(new UndoEntry
+            {
+                DeviceMacAddress = macAddress,
+                PreviousState = previousState
+            });
+
             _deviceStates[macAddress] = turnOn;
 
             CommandHistoryEntry entry = new()
@@ -33,6 +47,59 @@ public class CommandService
             _commandHistory.Add(entry);
 
             return entry;
+        }
+    }
+
+
+
+
+    public CommandHistoryEntry? UndoLastCommand()
+    {
+        lock (_lock)
+        {
+            if (_undoStack.Count == 0)
+            {
+                return null;
+            }
+
+            UndoEntry undoEntry = _undoStack.Pop();
+
+            string undoCommand;
+
+            if (undoEntry.PreviousState.HasValue)
+            {
+                bool previousState = undoEntry.PreviousState.Value;
+
+                _deviceStates[undoEntry.DeviceMacAddress] =
+                    previousState;
+
+                undoCommand = previousState ? "UNDO → ON" : "UNDO → OFF";
+            }
+            else
+            {
+                _deviceStates.Remove(undoEntry.DeviceMacAddress);
+                undoCommand = "UNDO → UNKNOWN";
+            }
+
+            CommandHistoryEntry entry = new()
+            {
+                DeviceMacAddress = undoEntry.DeviceMacAddress,
+                Command = undoCommand,
+                Timestamp = DateTime.UtcNow,
+                Status = "Undo applied successfully."
+            };
+
+            _commandHistory.Add(entry);
+
+            return entry;
+        }
+    }
+
+    public bool CanUndo()
+    {
+        lock (_lock)
+        {
+            return _undoStack.Count > 0;
         }
     }
 
@@ -55,4 +122,11 @@ public class CommandService
                     : null;
         }
     }
+
+    private sealed class UndoEntry
+    {
+        public string DeviceMacAddress { get; init; } = string.Empty;
+        public bool? PreviousState { get; init; }
+    }
+
 }
