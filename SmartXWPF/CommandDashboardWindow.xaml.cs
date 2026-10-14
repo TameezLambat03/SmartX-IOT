@@ -61,6 +61,38 @@ public partial class CommandDashboardWindow : Window
         await RefreshAllAsync();
     }
 
+    private async void BtnUndo_Click(object sender, RoutedEventArgs e)
+    {
+        BtnUndo.IsEnabled = false;
+
+        try
+        {
+            bool success =
+                await _commandApiService.UndoLastCommandAsync();
+
+            if (success)
+            {
+                LblCommandStatus.Text =
+                    "Last command undone successfully.";
+
+                await RefreshAllAsync();
+            }
+            else
+            {
+                LblCommandStatus.Text =
+                    "Undo failed. There may be no command to undo.";
+            }
+        }
+        catch (Exception ex)
+        {
+            LblCommandStatus.Text = $"Undo failed: {ex.Message}";
+        }
+        finally
+        {
+            BtnUndo.IsEnabled = true;
+        }
+    }
+
     private async Task RefreshAllAsync()
     {
         await RefreshDevicesAsync();

@@ -25,6 +25,16 @@ public class CommandApiService
             request);
     }
 
+    public async Task<bool> UndoLastCommandAsync()
+    {
+        using HttpResponseMessage response =
+            await _client.PostAsync(
+                "api/commands/undo",
+                null);
+
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<(bool Success, List<CommandHistoryEntry> History)>
         GetCommandHistoryAsync()
     {
