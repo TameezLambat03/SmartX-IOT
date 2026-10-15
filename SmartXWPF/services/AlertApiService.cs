@@ -1,5 +1,5 @@
-﻿
-using SmartX.Shared.Models;
+﻿using SmartX.Shared.Models;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -18,7 +18,7 @@ public class AlertApiService
 
     public async Task<List<CriticalAlert>> GetAlertsAsync()
     {
-        HttpResponseMessage response =
+        using HttpResponseMessage response =
             await _client.GetAsync("api/alerts");
 
         response.EnsureSuccessStatusCode();
@@ -26,5 +26,17 @@ public class AlertApiService
         return await response.Content
             .ReadFromJsonAsync<List<CriticalAlert>>()
             ?? new List<CriticalAlert>();
+    }
+
+    public async Task<List<string>> GetActiveErrorsAsync()
+    {
+        using HttpResponseMessage response =
+            await _client.GetAsync("api/alerts/active");
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content
+            .ReadFromJsonAsync<List<string>>()
+            ?? new List<string>();
     }
 }

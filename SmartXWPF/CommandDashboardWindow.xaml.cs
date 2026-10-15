@@ -1,5 +1,4 @@
-﻿
-using SmartX.Shared.Enums;
+﻿using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
 using SmartXWPF.Services;
 using System;
@@ -21,6 +20,11 @@ public partial class CommandDashboardWindow : Window
     private readonly RecommendationApiService _recommendationApiService;
 
     private List<SensorProfile> _allSensors = new();
+
+    private HashSet<string> _activeErrorMacAddresses =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private bool _activeErrorsLoaded;
 
     public CommandDashboardWindow()
     {
@@ -61,7 +65,9 @@ public partial class CommandDashboardWindow : Window
         await RefreshAllAsync();
     }
 
-    private async void BtnUndo_Click(object sender, RoutedEventArgs e)
+    private async void BtnUndo_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         BtnUndo.IsEnabled = false;
 
@@ -85,7 +91,8 @@ public partial class CommandDashboardWindow : Window
         }
         catch (Exception ex)
         {
-            LblCommandStatus.Text = $"Undo failed: {ex.Message}";
+            LblCommandStatus.Text =
+                $"Undo failed: {ex.Message}";
         }
         finally
         {
@@ -96,6 +103,7 @@ public partial class CommandDashboardWindow : Window
     private async Task RefreshAllAsync()
     {
         await RefreshDevicesAsync();
+        await RefreshActiveErrorsAsync();
         await RefreshCommandHistoryAsync();
         await RefreshSelectedDeviceStateAsync();
         await RefreshAlertsAsync();
@@ -129,8 +137,6 @@ public partial class CommandDashboardWindow : Window
 
             _allSensors = result.Sensors;
 
-            LstDevices.ItemsSource = _allSensors;
-
             LblDeviceCount.Text =
                 _allSensors.Count.ToString();
 
@@ -140,8 +146,7 @@ public partial class CommandDashboardWindow : Window
                         sensor.Category == SensorCategory.Actuator)
                     .ToList();
 
-            LblCommandStatus.Text =
-                $"Connected. Loaded {_allSensors.Count} registered device(s).";
+            ApplyDeviceFilters();
 
             UpdateCommandButtons();
         }
@@ -151,6 +156,133 @@ public partial class CommandDashboardWindow : Window
                 $"Could not load devices: {ex.Message}";
 
             UpdateCommandButtons();
+        }
+    }
+
+    private async Task RefreshActiveErrorsAsync()
+    {
+        try
+        {
+            List<string> activeErrors =
+                await _alertApiService.GetActiveErrorsAsync();
+
+            _activeErrorMacAddresses =
+                new HashSet<string>(
+                    activeErrors,
+                    StringComparer.OrdinalIgnoreCase);
+
+            _activeErrorsLoaded = true;
+
+            ApplyDeviceFilters();
+        }
+        catch (Exception)
+        {
+            _activeErrorMacAddresses.Clear();
+            _activeErrorsLoaded = false;
+
+            ApplyDeviceFilters();
+
+            LblCommandStatus.Text =
+                "Could not retrieve active errors. Check the API connection.";
+        }
+    }
+
+    private void TxtDeviceSearch_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        ApplyDeviceFilters();
+    }
+
+    private void CmbCategoryFilter_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        ApplyDeviceFilters();
+    }
+
+    private void ChkActiveAlertsOnly_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ApplyDeviceFilters();
+    }
+
+    private void ApplyDeviceFilters()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        string searchText =
+            TxtDeviceSearch.Text?.Trim() ?? string.Empty;
+
+        string selectedCategory =
+            (CmbCategoryFilter.SelectedItem as ComboBoxItem)
+                ?.Content?.ToString() ?? "All Categories";
+
+        bool activeAlertsOnly =
+            ChkActiveAlertsOnly.IsChecked == true;
+
+        if (activeAlertsOnly && !_activeErrorsLoaded)
+        {
+            LstDevices.ItemsSource =
+                new List<SensorProfile>();
+
+            LblCommandStatus.Text =
+                "Active-error data is unavailable. Check the API and refresh.";
+
+            return;
+        }
+
+        IEnumerable<SensorProfile> filteredSensors =
+            _allSensors;
+
+        // Filter by device category.
+        if (selectedCategory != "All Categories")
+        {
+            filteredSensors = filteredSensors.Where(sensor =>
+                sensor.Category.ToString().Equals(
+                    selectedCategory,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Show only devices with active errors when requested.
+        if (activeAlertsOnly)
+        {
+            filteredSensors = filteredSensors.Where(sensor =>
+                _activeErrorMacAddresses.Contains(
+                    sensor.DeviceMacAddress));
+        }
+
+        // Search by MAC address or deployment location.
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            filteredSensors = filteredSensors.Where(sensor =>
+                (sensor.DeviceMacAddress ?? string.Empty).Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase)
+                ||
+                (sensor.DeploymentLocation ?? string.Empty).Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        List<SensorProfile> results =
+            filteredSensors.ToList();
+
+        LstDevices.ItemsSource = results;
+
+        if (activeAlertsOnly)
+        {
+            LblCommandStatus.Text =
+                $"Showing {results.Count} device(s) matching the active-alert filters.";
+        }
+        else
+        {
+            LblCommandStatus.Text =
+                $"Showing {results.Count} of {_allSensors.Count} registered device(s).";
         }
     }
 
@@ -292,10 +424,14 @@ public partial class CommandDashboardWindow : Window
             List<CriticalAlert> alerts =
                 await _alertApiService.GetAlertsAsync();
 
+            // Keep all historical alerts visible in the Alerts tab.
             DgAlerts.ItemsSource = alerts;
 
+            // Count only devices with currently active errors.
             LblActiveAlerts.Text =
-                alerts.Count.ToString();
+                _activeErrorsLoaded
+                    ? _activeErrorMacAddresses.Count.ToString()
+                    : "—";
         }
         catch (Exception ex)
         {
