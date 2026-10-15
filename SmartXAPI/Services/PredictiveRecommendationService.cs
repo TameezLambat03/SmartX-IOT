@@ -1,4 +1,5 @@
-﻿using SmartX.Shared.Models;
+﻿
+using SmartX.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ public class PredictiveRecommendationService
     private const int MaxRecommendations = 100;
     private const int MaxCommandEvents = 200;
     private const float LowReadingThreshold = 20.0f;
+    private const int RequiredRepeatedCommands = 3;
 
     private readonly List<PredictiveRecommendation> _recommendations = new();
 
@@ -49,20 +51,24 @@ public class PredictiveRecommendationService
                 readings.RemoveAt(0);
             }
 
-            // Retain the existing threshold-based recommendations.
             AddThresholdRecommendation(
                 macAddress,
                 location,
                 timestamp,
                 sensorValue);
 
-            // Look for a recurring decline across recent readings.
             AddDecliningTrendRecommendation(
                 macAddress,
                 location,
                 timestamp,
                 sensorValue,
                 readings);
+
+            AddCommandPatternRecommendation(
+                macAddress,
+                location,
+                timestamp,
+                sensorValue);
         }
     }
 
@@ -75,9 +81,10 @@ public class PredictiveRecommendationService
         {
             _commandHistory.Add(new CommandRecord
             {
-                DeviceMacAddress = macAddress,
-                Command = command,
-                Timestamp = timestamp
+                DeviceMacAddress = macAddress.Trim(),
+                Command = command.Trim().ToUpperInvariant(),
+                Timestamp = timestamp,
+                RecordedAtUtc = DateTime.UtcNow
             });
 
             if (_commandHistory.Count > MaxCommandEvents)
@@ -145,7 +152,6 @@ public class PredictiveRecommendationService
         float sensorValue,
         List<ReadingRecord> readings)
     {
-        // Require at least three readings before analysing a trend.
         if (readings.Count < 3)
         {
             return;
@@ -166,14 +172,10 @@ public class PredictiveRecommendationService
         float totalDrop =
             recentReadings[0].Value - recentReadings[2].Value;
 
-        // Ignore negligible changes that may be normal sensor variation.
         if (totalDrop < 2.0f)
         {
             return;
         }
-
-        // Avoid repeatedly creating the same trend recommendation
-        // for the same device until the previous one is no longer current.
 
         PredictiveRecommendation? existingTrendRecommendation =
             _recommendations
@@ -187,21 +189,16 @@ public class PredictiveRecommendationService
                 .OrderByDescending(item => item.Timestamp)
                 .FirstOrDefault();
 
-        if(existingTrendRecommendation != null &&
-    timestamp >= existingTrendRecommendation.Timestamp &&
-    timestamp - existingTrendRecommendation.Timestamp
-        <= TimeSpan.FromMinutes(5))
+        if (existingTrendRecommendation != null &&
+            timestamp >= existingTrendRecommendation.Timestamp &&
+            timestamp - existingTrendRecommendation.Timestamp
+                <= TimeSpan.FromMinutes(5))
         {
-            // Update the existing trend recommendation instead of
-            // adding another one for the same device and recent period.
             existingTrendRecommendation.Timestamp = timestamp;
             existingTrendRecommendation.SensorValue = sensorValue;
             existingTrendRecommendation.DeploymentLocation = location;
-
             existingTrendRecommendation.Severity =
-                sensorValue < 10.0f ? "Critical" :
-                sensorValue < 15.0f ? "High" :
-                "Warning";
+                GetSeverity(sensorValue);
 
             existingTrendRecommendation.Recommendation =
                 $"Repeated decline detected: the last three readings fell by {totalDrop:F1} units.";
@@ -212,11 +209,110 @@ public class PredictiveRecommendationService
             return;
         }
 
+        AddRecommendation(new PredictiveRecommendation
+        {
+            DeviceMacAddress = macAddress,
+            DeploymentLocation = location,
+            Timestamp = timestamp,
+            SensorValue = sensorValue,
+            Severity = GetSeverity(sensorValue),
+            Recommendation =
+                $"Repeated decline detected: the last three readings fell by {totalDrop:F1} units.",
+            RecommendedAction =
+                "Investigate the cause of the continuing decline and check the environmental controls before conditions worsen."
+        });
+    }
 
-        string severity =
-            sensorValue < 10.0f ? "Critical" :
-            sensorValue < 15.0f ? "High" :
-            "Warning";
+    private void AddCommandPatternRecommendation(
+        string macAddress,
+        string location,
+        DateTime timestamp,
+        float sensorValue)
+    {
+        if (sensorValue >= LowReadingThreshold)
+        {
+            return;
+        }
+
+        // Use server-side recording times rather than telemetry timestamps.
+        // This prevents an older packet timestamp from excluding commands
+        // that were actually recorded before the reading was processed.
+        DateTime now = DateTime.UtcNow;
+
+        List<CommandRecord> recentCommands =
+            _commandHistory
+                .Where(item =>
+                    (item.Command == "ON" || item.Command == "OFF") &&
+                    item.RecordedAtUtc <= now &&
+                    now - item.RecordedAtUtc <= TimeSpan.FromMinutes(30))
+                .ToList();
+
+        // Evaluate each actuator separately so commands from different
+        // actuators are never combined to satisfy the repetition threshold.
+        var matchingPattern = recentCommands
+            .GroupBy(
+                item => item.DeviceMacAddress,
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                List<CommandRecord> commands =
+                    group.OrderByDescending(
+                        item => item.RecordedAtUtc).ToList();
+
+                string latestCommand = commands[0].Command;
+
+                int matchingCount = commands.Count(
+                    item => item.Command == latestCommand);
+
+                return new
+                {
+                    DeviceMacAddress = group.Key,
+                    Command = latestCommand,
+                    Count = matchingCount,
+                    LatestTime = commands[0].RecordedAtUtc
+                };
+            })
+            .Where(item => item.Count >= RequiredRepeatedCommands)
+            .OrderByDescending(item => item.Count)
+            .ThenByDescending(item => item.LatestTime)
+            .FirstOrDefault();
+
+        if (matchingPattern == null)
+        {
+            return;
+        }
+
+        string recommendationText =
+            $"Repeated actuator commands detected: {matchingPattern.Count} recent {matchingPattern.Command} commands were recorded for actuator {matchingPattern.DeviceMacAddress} while monitoring a low environmental reading.";
+
+        string actionText =
+            "Review the actuator command history and environmental readings to determine whether the current operating procedure is addressing the low reading.";
+
+        PredictiveRecommendation? existingRecommendation =
+            _recommendations
+                .Where(item =>
+                    item.DeviceMacAddress.Equals(
+                        macAddress,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    item.Recommendation.Contains(
+                        "Repeated actuator commands",
+                        StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(item => item.Timestamp)
+                .FirstOrDefault();
+
+        if (existingRecommendation != null &&
+            timestamp >= existingRecommendation.Timestamp &&
+            timestamp - existingRecommendation.Timestamp
+                <= TimeSpan.FromMinutes(5))
+        {
+            existingRecommendation.Timestamp = timestamp;
+            existingRecommendation.SensorValue = sensorValue;
+            existingRecommendation.DeploymentLocation = location;
+            existingRecommendation.Severity = GetSeverity(sensorValue);
+            existingRecommendation.Recommendation = recommendationText;
+            existingRecommendation.RecommendedAction = actionText;
+            return;
+        }
 
         AddRecommendation(new PredictiveRecommendation
         {
@@ -224,11 +320,9 @@ public class PredictiveRecommendationService
             DeploymentLocation = location,
             Timestamp = timestamp,
             SensorValue = sensorValue,
-            Severity = severity,
-            Recommendation =
-                $"Repeated decline detected: the last three readings fell by {totalDrop:F1} units.",
-            RecommendedAction =
-                "Investigate the cause of the continuing decline and check the environmental controls before conditions worsen."
+            Severity = GetSeverity(sensorValue),
+            Recommendation = recommendationText,
+            RecommendedAction = actionText
         });
     }
 
@@ -254,6 +348,13 @@ public class PredictiveRecommendationService
         }
     }
 
+    private static string GetSeverity(float sensorValue)
+    {
+        return sensorValue < 10.0f ? "Critical" :
+               sensorValue < 15.0f ? "High" :
+               "Warning";
+    }
+
     private static int GetSeverityRank(string severity)
     {
         return severity switch
@@ -276,5 +377,6 @@ public class PredictiveRecommendationService
         public string DeviceMacAddress { get; init; } = string.Empty;
         public string Command { get; init; } = string.Empty;
         public DateTime Timestamp { get; init; }
+        public DateTime RecordedAtUtc { get; init; }
     }
 }
