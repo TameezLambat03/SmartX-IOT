@@ -438,6 +438,56 @@
                             </ListView>
                         </Grid>
                     </TabItem>
+                    <!-- Environmental history -->
+                    <TabItem Header="Environmental History">
+                        <Grid Background="#171D22" Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                   Text="ENVIRONMENTAL SENSOR HISTORY"
+                   Foreground="#20C997"
+                   FontSize="12"
+                   FontWeight="Bold"
+                   Margin="0,8,0,10"/>
+
+                            <DataGrid Grid.Row="1"
+                  x:Name="DgEnvironmentalHistory"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  Background="#171D22"
+                  Foreground="#F1F5F7"
+                  RowBackground="#171D22"
+                  AlternatingRowBackground="#20282D"
+                  BorderBrush="#2B363D"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="DEVICE MAC"
+                                    Binding="{Binding DeviceMacAddress}"
+                                    Width="150"/>
+
+                                    <DataGridTextColumn Header="LOCATION"
+                                    Binding="{Binding DeploymentLocation}"
+                                    Width="160"/>
+
+                                    <DataGridTextColumn Header="TIMESTAMP"
+                                    Binding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
+                                    Width="155"/>
+
+                                    <DataGridTextColumn Header="SENSOR VALUE"
+                                    Binding="{Binding SensorValue}"
+                                    Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
 
                     <!-- Alerts -->
                     <TabItem Header="Alerts">

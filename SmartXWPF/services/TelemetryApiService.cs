@@ -65,4 +65,16 @@ public class TelemetryApiService
         return data ?? new List<bool>();
     }
 
+
+
+public async Task<List<TelemetryPacket<float>>>
+    GetEnvironmentalHistoryAsync()
+    {
+        List<TelemetryPacket<float>>? history =
+            await _client.GetFromJsonAsync<
+                List<TelemetryPacket<float>>>(
+                    "api/telemetry/environmental/history");
+
+        return history ?? new List<TelemetryPacket<float>>();
+    }
 }

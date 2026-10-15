@@ -19,6 +19,7 @@ public partial class CommandDashboardWindow : Window
     private readonly CommandApiService _commandApiService;
     private readonly AlertApiService _alertApiService;
     private readonly RecommendationApiService _recommendationApiService;
+    private readonly TelemetryApiService _telemetryApiService;
 
     private List<SensorProfile> _allSensors = new();
 
@@ -50,6 +51,9 @@ public partial class CommandDashboardWindow : Window
 
         _recommendationApiService =
             new RecommendationApiService(apiService);
+
+        _telemetryApiService =
+            new TelemetryApiService(apiService);
 
         Loaded += CommandDashboardWindow_Loaded;
     }
@@ -111,6 +115,7 @@ public partial class CommandDashboardWindow : Window
         await RefreshSelectedDeviceStateAsync();
         await RefreshAlertsAsync();
         await RefreshRecommendationsAsync();
+        await RefreshEnvironmentalHistoryAsync();
     }
 
     private async Task RefreshDevicesAsync()
@@ -419,7 +424,6 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
-    // Runs whenever the user types in the history search box.
     private void TxtCommandSearch_TextChanged(
         object sender,
         TextChangedEventArgs e)
@@ -427,7 +431,6 @@ public partial class CommandDashboardWindow : Window
         ApplyCommandHistoryFilters();
     }
 
-    // Runs whenever the user changes the command filter.
     private void CmbCommandFilter_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -435,7 +438,6 @@ public partial class CommandDashboardWindow : Window
         ApplyCommandHistoryFilters();
     }
 
-    // Applies the search and ON/OFF filters to the stored history.
     private void ApplyCommandHistoryFilters()
     {
         if (!IsLoaded)
@@ -453,7 +455,6 @@ public partial class CommandDashboardWindow : Window
         IEnumerable<CommandHistoryEntry> filteredHistory =
             _allCommandHistory;
 
-        // Filter by command type.
         if (selectedCommand != "All Commands")
         {
             filteredHistory = filteredHistory.Where(entry =>
@@ -463,7 +464,6 @@ public partial class CommandDashboardWindow : Window
                     StringComparison.OrdinalIgnoreCase));
         }
 
-        // Search across the command, device MAC address and timestamp.
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             filteredHistory = filteredHistory.Where(entry =>
@@ -521,6 +521,26 @@ public partial class CommandDashboardWindow : Window
         {
             LblCommandStatus.Text =
                 $"Could not load recommendations: {ex.Message}";
+        }
+    }
+
+    // Loads timestamped environmental telemetry, newest first.
+    private async Task RefreshEnvironmentalHistoryAsync()
+    {
+        try
+        {
+            List<TelemetryPacket<float>> history =
+                await _telemetryApiService
+                    .GetEnvironmentalHistoryAsync();
+
+            DgEnvironmentalHistory.ItemsSource = history
+                .OrderByDescending(packet => packet.Timestamp)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            LblCommandStatus.Text =
+                $"Could not load environmental history: {ex.Message}";
         }
     }
 
