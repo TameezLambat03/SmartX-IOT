@@ -341,6 +341,25 @@ app.MapGet("/api/alerts", (CriticalAlertService alertService) =>
 {
     return Results.Ok(alertService.GetAlerts());
 });
+
+
+app.MapGet(
+    "/api/alerts/active",
+    (CriticalAlertService alertService) =>
+    {
+        return Results.Ok(alertService.GetActiveErrors());
+    });
+
+app.MapGet(
+    "/api/alerts/active/count",
+    (CriticalAlertService alertService) =>
+    {
+        return Results.Ok(new
+        {
+            ActiveErrorCount = alertService.GetActiveErrorCount()
+        });
+    });
+
 // SENSOR REGISTRATION
 
 
