@@ -1,4 +1,5 @@
-﻿using SmartX.Shared.Enums;
+﻿
+using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
 using SmartXWPF.Services;
 using System;
@@ -20,6 +21,8 @@ public partial class CommandDashboardWindow : Window
     private readonly RecommendationApiService _recommendationApiService;
 
     private List<SensorProfile> _allSensors = new();
+
+    private List<CommandHistoryEntry> _allCommandHistory = new();
 
     private HashSet<string> _activeErrorMacAddresses =
         new(StringComparer.OrdinalIgnoreCase);
@@ -239,7 +242,6 @@ public partial class CommandDashboardWindow : Window
         IEnumerable<SensorProfile> filteredSensors =
             _allSensors;
 
-        // Filter by device category.
         if (selectedCategory != "All Categories")
         {
             filteredSensors = filteredSensors.Where(sensor =>
@@ -248,7 +250,6 @@ public partial class CommandDashboardWindow : Window
                     StringComparison.OrdinalIgnoreCase));
         }
 
-        // Show only devices with active errors when requested.
         if (activeAlertsOnly)
         {
             filteredSensors = filteredSensors.Where(sensor =>
@@ -256,7 +257,6 @@ public partial class CommandDashboardWindow : Window
                     sensor.DeviceMacAddress));
         }
 
-        // Search by MAC address or deployment location.
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             filteredSensors = filteredSensors.Where(sensor =>
@@ -387,6 +387,7 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
+    // Loads the complete command history from the API.
     private async Task RefreshCommandHistoryAsync()
     {
         try
@@ -402,19 +403,87 @@ public partial class CommandDashboardWindow : Window
                 return;
             }
 
-            LstCommandHistory.ItemsSource =
-                result.History
-                    .OrderByDescending(entry => entry.Timestamp)
-                    .ToList();
+            _allCommandHistory = result.History
+                .OrderByDescending(entry => entry.Timestamp)
+                .ToList();
+
+            ApplyCommandHistoryFilters();
 
             LblCommandCount.Text =
-                result.History.Count.ToString();
+                _allCommandHistory.Count.ToString();
         }
         catch (Exception ex)
         {
             LblCommandStatus.Text =
                 $"Could not load command history: {ex.Message}";
         }
+    }
+
+    // Runs whenever the user types in the history search box.
+    private void TxtCommandSearch_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        ApplyCommandHistoryFilters();
+    }
+
+    // Runs whenever the user changes the command filter.
+    private void CmbCommandFilter_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        ApplyCommandHistoryFilters();
+    }
+
+    // Applies the search and ON/OFF filters to the stored history.
+    private void ApplyCommandHistoryFilters()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        string searchText =
+            TxtCommandSearch.Text?.Trim() ?? string.Empty;
+
+        string selectedCommand =
+            (CmbCommandFilter.SelectedItem as ComboBoxItem)
+                ?.Content?.ToString() ?? "All Commands";
+
+        IEnumerable<CommandHistoryEntry> filteredHistory =
+            _allCommandHistory;
+
+        // Filter by command type.
+        if (selectedCommand != "All Commands")
+        {
+            filteredHistory = filteredHistory.Where(entry =>
+                string.Equals(
+                    entry.Command,
+                    selectedCommand,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Search across the command, device MAC address and timestamp.
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            filteredHistory = filteredHistory.Where(entry =>
+                (entry.Command ?? string.Empty).Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase)
+                ||
+                (entry.DeviceMacAddress ?? string.Empty).Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase)
+                ||
+                entry.Timestamp.ToString().Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        List<CommandHistoryEntry> results =
+            filteredHistory.ToList();
+
+        LstCommandHistory.ItemsSource = results;
     }
 
     private async Task RefreshAlertsAsync()
@@ -424,10 +493,8 @@ public partial class CommandDashboardWindow : Window
             List<CriticalAlert> alerts =
                 await _alertApiService.GetAlertsAsync();
 
-            // Keep all historical alerts visible in the Alerts tab.
             DgAlerts.ItemsSource = alerts;
 
-            // Count only devices with currently active errors.
             LblActiveAlerts.Text =
                 _activeErrorsLoaded
                     ? _activeErrorMacAddresses.Count.ToString()

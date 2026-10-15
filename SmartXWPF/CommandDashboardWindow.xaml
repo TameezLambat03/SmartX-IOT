@@ -215,46 +215,44 @@
                         </Grid.ColumnDefinitions>
 
                         <Button x:Name="BtnTurnOn"
-            Grid.Column="0"
-            Content="TURN ON"
-            Click="BtnTurnOn_Click"
-            Height="42"
-            Margin="0,0,5,0"
-            Background="#19362F"
-            Foreground="#20C997"
-            BorderBrush="#245C4D"
-            FontWeight="Bold"
-            Cursor="Hand"
-            IsEnabled="False"/>
+                                Grid.Column="0"
+                                Content="TURN ON"
+                                Click="BtnTurnOn_Click"
+                                Height="42"
+                                Margin="0,0,5,0"
+                                Background="#19362F"
+                                Foreground="#20C997"
+                                BorderBrush="#245C4D"
+                                FontWeight="Bold"
+                                Cursor="Hand"
+                                IsEnabled="False"/>
 
                         <Button x:Name="BtnTurnOff"
-            Grid.Column="1"
-            Content="TURN OFF"
-            Click="BtnTurnOff_Click"
-            Height="42"
-            Margin="5,0,0,0"
-            Background="#382124"
-            Foreground="#FF7B84"
-            BorderBrush="#63343A"
-            FontWeight="Bold"
-            Cursor="Hand"
-            IsEnabled="False"/>
+                                Grid.Column="1"
+                                Content="TURN OFF"
+                                Click="BtnTurnOff_Click"
+                                Height="42"
+                                Margin="5,0,0,0"
+                                Background="#382124"
+                                Foreground="#FF7B84"
+                                BorderBrush="#63343A"
+                                FontWeight="Bold"
+                                Cursor="Hand"
+                                IsEnabled="False"/>
                     </Grid>
 
-
                     <Button x:Name="BtnUndo"
-        Content="↶ UNDO LAST COMMAND"
-        Click="BtnUndo_Click"
-        Height="38"
-        Margin="0,10,0,0"
-        Background="#20282D"
-        Foreground="#F1F5F7"
-        BorderBrush="#20C997"
-        BorderThickness="1"
-        FontWeight="Bold"
-        Cursor="Hand"
-        IsEnabled="True"/>
-
+                            Content="↶ UNDO LAST COMMAND"
+                            Click="BtnUndo_Click"
+                            Height="38"
+                            Margin="0,10,0,0"
+                            Background="#20282D"
+                            Foreground="#F1F5F7"
+                            BorderBrush="#20C997"
+                            BorderThickness="1"
+                            FontWeight="Bold"
+                            Cursor="Hand"
+                            IsEnabled="True"/>
 
                     <Button Content="REFRESH ALL DATA"
                             Click="BtnRefreshAll_Click"
@@ -274,109 +272,107 @@
                 </StackPanel>
             </Border>
 
-            <!-- Devices, history, alerts and recommendations -->
+            <!-- Dashboard tabs -->
             <Border Grid.Column="1"
                     Background="#171D22"
                     BorderBrush="#2B363D"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="10"
-                    Margin="0,0,0,0">
+                    Padding="10">
 
                 <TabControl Background="#171D22"
                             Foreground="#F1F5F7"
                             BorderBrush="#2B363D">
 
-                   <!-- Registered devices -->
-<TabItem Header="Devices">
-    <Grid Background="#171D22" Margin="4">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+                    <!-- Registered devices -->
+                    <TabItem Header="Devices">
+                        <Grid Background="#171D22" Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Text="REGISTERED DEVICES"
-                   Foreground="#20C997"
-                   FontSize="12"
-                   FontWeight="Bold"
-                   Margin="0,8,0,10"/>
+                            <TextBlock Grid.Row="0"
+                                       Text="REGISTERED DEVICES"
+                                       Foreground="#20C997"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Margin="0,8,0,10"/>
 
-        <!-- Device search and filters -->
-        <Grid Grid.Row="1" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.4*"/>
-                <ColumnDefinition Width="1*"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                            <Grid Grid.Row="1" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.4*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-            <TextBox x:Name="TxtDeviceSearch"
-                     Grid.Row="0"
-                     Grid.Column="0"
-                     Margin="0,0,6,6"
-                     Padding="8"
-                     FontSize="12"
-                     ToolTip="Search by MAC address or deployment location"
-                     TextChanged="TxtDeviceSearch_TextChanged"/>
+                                <TextBox x:Name="TxtDeviceSearch"
+                                         Grid.Row="0"
+                                         Grid.Column="0"
+                                         Margin="0,0,6,6"
+                                         Padding="8"
+                                         FontSize="12"
+                                         ToolTip="Search by MAC address or deployment location"
+                                         TextChanged="TxtDeviceSearch_TextChanged"/>
 
-            <ComboBox x:Name="CmbCategoryFilter"
-                      Grid.Row="0"
-                      Grid.Column="1"
-                      Margin="6,0,0,6"
-                      Padding="6"
-                      SelectedIndex="0"
-                      SelectionChanged="CmbCategoryFilter_SelectionChanged">
-                <ComboBoxItem Content="All Categories"/>
-                <ComboBoxItem Content="Environmental"/>
-                <ComboBoxItem Content="Power"/>
-                <ComboBoxItem Content="Actuator"/>
-            </ComboBox>
+                                <ComboBox x:Name="CmbCategoryFilter"
+                                          Grid.Row="0"
+                                          Grid.Column="1"
+                                          Margin="6,0,0,6"
+                                          Padding="6"
+                                          SelectedIndex="0"
+                                          SelectionChanged="CmbCategoryFilter_SelectionChanged">
+                                    <ComboBoxItem Content="All Categories"/>
+                                    <ComboBoxItem Content="Environmental"/>
+                                    <ComboBoxItem Content="Power"/>
+                                    <ComboBoxItem Content="Actuator"/>
+                                </ComboBox>
 
-            <CheckBox x:Name="ChkActiveAlertsOnly"
-                      Grid.Row="1"
-                      Grid.ColumnSpan="2"
-                      Content="Show only devices with active alerts"
-                      Foreground="#F59E0B"
-                      FontSize="12"
-                      Margin="2,2,0,4"
-                      Checked="ChkActiveAlertsOnly_Changed"
-                      Unchecked="ChkActiveAlertsOnly_Changed"/>
-        </Grid>
+                                <CheckBox x:Name="ChkActiveAlertsOnly"
+                                          Grid.Row="1"
+                                          Grid.ColumnSpan="2"
+                                          Content="Show only devices with active alerts"
+                                          Foreground="#F59E0B"
+                                          FontSize="12"
+                                          Margin="2,2,0,4"
+                                          Checked="ChkActiveAlertsOnly_Changed"
+                                          Unchecked="ChkActiveAlertsOnly_Changed"/>
+                            </Grid>
 
-        <ListView Grid.Row="2"
-                  x:Name="LstDevices"
-                  Background="#171D22"
-                  Foreground="#F1F5F7"
-                  BorderBrush="#2B363D"
-                  BorderThickness="1"
-                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="MAC ADDRESS"
-                                    Width="175"
-                                    DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+                            <ListView Grid.Row="2"
+                                      x:Name="LstDevices"
+                                      Background="#171D22"
+                                      Foreground="#F1F5F7"
+                                      BorderBrush="#2B363D"
+                                      BorderThickness="1"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="MAC ADDRESS"
+                                                        Width="175"
+                                                        DisplayMemberBinding="{Binding DeviceMacAddress}"/>
+                                        <GridViewColumn Header="CATEGORY"
+                                                        Width="115"
+                                                        DisplayMemberBinding="{Binding Category}"/>
+                                        <GridViewColumn Header="DEPLOYMENT LOCATION"
+                                                        Width="200"
+                                                        DisplayMemberBinding="{Binding DeploymentLocation}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </TabItem>
 
-                    <GridViewColumn Header="CATEGORY"
-                                    Width="115"
-                                    DisplayMemberBinding="{Binding Category}"/>
-
-                    <GridViewColumn Header="DEPLOYMENT LOCATION"
-                                    Width="200"
-                                    DisplayMemberBinding="{Binding DeploymentLocation}"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
-    </Grid>
-</TabItem>
                     <!-- Command history -->
                     <TabItem Header="Command History">
                         <Grid Background="#171D22" Margin="4">
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
@@ -388,7 +384,34 @@
                                        FontWeight="Bold"
                                        Margin="0,8,0,10"/>
 
-                            <ListView Grid.Row="1"
+                            <!-- Command history search and filter -->
+                            <Grid Grid.Row="1" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.4*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="TxtCommandSearch"
+                                         Grid.Column="0"
+                                         Margin="0,0,6,0"
+                                         Padding="8"
+                                         FontSize="12"
+                                         ToolTip="Search by device MAC address or command"
+                                         TextChanged="TxtCommandSearch_TextChanged"/>
+
+                                <ComboBox x:Name="CmbCommandFilter"
+                                          Grid.Column="1"
+                                          Margin="6,0,0,0"
+                                          Padding="6"
+                                          SelectedIndex="0"
+                                          SelectionChanged="CmbCommandFilter_SelectionChanged">
+                                    <ComboBoxItem Content="All Commands"/>
+                                    <ComboBoxItem Content="ON"/>
+                                    <ComboBoxItem Content="OFF"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <ListView Grid.Row="2"
                                       x:Name="LstCommandHistory"
                                       Background="#171D22"
                                       Foreground="#F1F5F7"
@@ -401,15 +424,12 @@
                                         <GridViewColumn Header="DEVICE"
                                                         Width="145"
                                                         DisplayMemberBinding="{Binding DeviceMacAddress}"/>
-
                                         <GridViewColumn Header="COMMAND"
                                                         Width="85"
                                                         DisplayMemberBinding="{Binding Command}"/>
-
                                         <GridViewColumn Header="TIMESTAMP (UTC)"
                                                         Width="175"
                                                         DisplayMemberBinding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"/>
-
                                         <GridViewColumn Header="STATUS"
                                                         Width="170"
                                                         DisplayMemberBinding="{Binding Status}"/>
@@ -453,19 +473,15 @@
                                     <DataGridTextColumn Header="SEVERITY"
                                                         Binding="{Binding Severity}"
                                                         Width="90"/>
-
                                     <DataGridTextColumn Header="READING"
                                                         Binding="{Binding SensorValue}"
                                                         Width="75"/>
-
                                     <DataGridTextColumn Header="DEVICE"
                                                         Binding="{Binding DeviceMacAddress}"
                                                         Width="145"/>
-
                                     <DataGridTextColumn Header="LOCATION"
                                                         Binding="{Binding DeploymentLocation}"
                                                         Width="170"/>
-
                                     <DataGridTextColumn Header="MESSAGE"
                                                         Binding="{Binding Message}"
                                                         Width="200"/>
@@ -508,19 +524,15 @@
                                     <DataGridTextColumn Header="SEVERITY"
                                                         Binding="{Binding Severity}"
                                                         Width="90"/>
-
                                     <DataGridTextColumn Header="READING"
                                                         Binding="{Binding SensorValue}"
                                                         Width="75"/>
-
                                     <DataGridTextColumn Header="DEVICE"
                                                         Binding="{Binding DeviceMacAddress}"
                                                         Width="145"/>
-
                                     <DataGridTextColumn Header="RECOMMENDATION"
                                                         Binding="{Binding Recommendation}"
                                                         Width="220"/>
-
                                     <DataGridTextColumn Header="RECOMMENDED ACTION"
                                                         Binding="{Binding RecommendedAction}"
                                                         Width="220"/>

@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Http.Json;
 using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
@@ -21,7 +22,9 @@ builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<AttachmentEncryptionService>();
 builder.Services.AddSingleton<StartupSeeder>();
 builder.Services.AddSingleton<PredictiveRecommendationService>();
+
 var app = builder.Build();
+
 using (IServiceScope scope = app.Services.CreateScope())
 {
     StartupSeeder seeder =
@@ -66,9 +69,8 @@ app.MapPost(
             });
         }
 
-        if (packet.SensorValue is float.NaN ||
-            packet.SensorValue is float.PositiveInfinity ||
-            packet.SensorValue is float.NegativeInfinity)
+        if (float.IsNaN(packet.SensorValue) ||
+            float.IsInfinity(packet.SensorValue))
         {
             return Results.BadRequest(new
             {
@@ -124,9 +126,7 @@ app.MapPost(
     });
 
 
-
 // POWER TELEMETRY
-
 
 app.MapPost(
     "/api/telemetry/power",
@@ -210,7 +210,6 @@ app.MapPost(
 
 // ACTUATOR TELEMETRY
 
-
 app.MapPost(
     "/api/telemetry/actuator",
     (
@@ -281,9 +280,7 @@ app.MapPost(
     });
 
 
-
 // TELEMETRY RETRIEVAL
-
 
 app.MapGet(
     "/api/telemetry/environmental",
@@ -308,6 +305,7 @@ app.MapGet(
         return Results.Ok(
             ingestionService.GetActuatorData());
     });
+
 
 // TIMESTAMPED TELEMETRY HISTORY
 
@@ -336,12 +334,14 @@ app.MapGet(
     });
 
 
+// ALERTS
 
-app.MapGet("/api/alerts", (CriticalAlertService alertService) =>
-{
-    return Results.Ok(alertService.GetAlerts());
-});
-
+app.MapGet(
+    "/api/alerts",
+    (CriticalAlertService alertService) =>
+    {
+        return Results.Ok(alertService.GetAlerts());
+    });
 
 app.MapGet(
     "/api/alerts/active",
@@ -360,8 +360,8 @@ app.MapGet(
         });
     });
 
-// SENSOR REGISTRATION
 
+// SENSOR REGISTRATION
 
 app.MapPost(
     "/api/sensors",
@@ -422,8 +422,7 @@ app.MapPost(
         }
 
         SensorProfile? existingSensor =
-            sensorService.GetSensorByMacAddress(
-                macAddress);
+            sensorService.GetSensorByMacAddress(macAddress);
 
         if (existingSensor != null)
         {
@@ -434,37 +433,29 @@ app.MapPost(
             });
         }
 
-        sensor.DeviceMacAddress =
-            macAddress;
-
-        sensor.DeploymentLocation =
-            deploymentLocation;
+        sensor.DeviceMacAddress = macAddress;
+        sensor.DeploymentLocation = deploymentLocation;
 
         SensorProfile registeredSensor =
             sensorService.RegisterSensor(sensor);
 
         return Results.Ok(new
         {
-            Message =
-                "Sensor successfully registered.",
-
-            Sensor =
-                registeredSensor
+            Message = "Sensor successfully registered.",
+            Sensor = registeredSensor
         });
     });
 
 
-
 // SENSOR RETRIEVAL
-
 
 app.MapGet(
     "/api/sensors",
     (SensorService sensorService) =>
     {
-        return Results.Ok(
-            sensorService.GetAllSensors());
+        return Results.Ok(sensorService.GetAllSensors());
     });
+
 
 // COMMAND EXECUTION
 
@@ -473,7 +464,8 @@ app.MapPost(
     (
         CommandRequest request,
         SensorService sensorService,
-        CommandService commandService
+        CommandService commandService,
+        PredictiveRecommendationService recommendationService
     ) =>
     {
         if (request == null)
@@ -526,7 +518,8 @@ app.MapPost(
         {
             return Results.BadRequest(new
             {
-                Message = "Commands can only be sent to registered actuator devices."
+                Message =
+                    "Commands can only be sent to registered actuator devices."
             });
         }
 
@@ -535,17 +528,31 @@ app.MapPost(
                 sensor.DeviceMacAddress,
                 command == "ON");
 
+        // Record the actual manual command for predictive analysis.
+        recommendationService.RecordManualCommand(
+            sensor.DeviceMacAddress,
+            command,
+            entry.Timestamp);
+
         return Results.Ok(new
         {
-            Message = $"Simulated {command} command recorded successfully.",
+            Message =
+                $"Simulated {command} command recorded successfully.",
+
             Command = entry
         });
     });
-app.MapGet("/api/recommendations", (
-    PredictiveRecommendationService recommendationService) =>
-{
-    return Results.Ok(recommendationService.GetRecommendations());
-});
+
+
+// RECOMMENDATIONS
+
+app.MapGet(
+    "/api/recommendations",
+    (PredictiveRecommendationService recommendationService) =>
+    {
+        return Results.Ok(
+            recommendationService.GetRecommendations());
+    });
 
 
 // COMMAND HISTORY
@@ -554,8 +561,7 @@ app.MapGet(
     "/api/commands",
     (CommandService commandService) =>
     {
-        return Results.Ok(
-            commandService.GetCommandHistory());
+        return Results.Ok(commandService.GetCommandHistory());
     });
 
 
@@ -588,7 +594,8 @@ app.MapGet(
             });
         }
 
-        bool? state = commandService.GetDeviceState(macAddress);
+        bool? state =
+            commandService.GetDeviceState(macAddress);
 
         return Results.Ok(new
         {
@@ -600,9 +607,15 @@ app.MapGet(
         });
     });
 
+
+// UNDO LAST COMMAND
+
 app.MapPost(
     "/api/commands/undo",
-    (CommandService commandService) =>
+    (
+        CommandService commandService,
+        PredictiveRecommendationService recommendationService
+    ) =>
     {
         CommandHistoryEntry? entry =
             commandService.UndoLastCommand();
@@ -615,6 +628,12 @@ app.MapPost(
             });
         }
 
+        // Record the undo event as part of the operator's command history.
+        recommendationService.RecordManualCommand(
+            entry.DeviceMacAddress,
+            entry.Command,
+            entry.Timestamp);
+
         return Results.Ok(new
         {
             Message = "The last command was undone successfully.",
@@ -623,9 +642,7 @@ app.MapPost(
     });
 
 
-
 // MEDIA / LOG FILE ATTACHMENT
-
 
 app.MapPost(
     "/api/sensors/{macAddress}/attachment",
@@ -633,7 +650,7 @@ app.MapPost(
         string macAddress,
         IFormFile file,
         SensorService sensorService,
-AttachmentEncryptionService encryptionService) =>
+        AttachmentEncryptionService encryptionService) =>
     {
         if (string.IsNullOrWhiteSpace(macAddress))
         {
@@ -652,8 +669,7 @@ AttachmentEncryptionService encryptionService) =>
         }
 
         SensorProfile? sensor =
-            sensorService.GetSensorByMacAddress(
-                macAddress.Trim());
+            sensorService.GetSensorByMacAddress(macAddress.Trim());
 
         if (sensor == null)
         {
@@ -669,12 +685,10 @@ AttachmentEncryptionService encryptionService) =>
                 AppContext.BaseDirectory,
                 "Attachments");
 
-        Directory.CreateDirectory(
-            attachmentsFolder);
+        Directory.CreateDirectory(attachmentsFolder);
 
         string safeFileName =
-            Path.GetFileName(
-                file.FileName);
+            Path.GetFileName(file.FileName);
 
         string savedFilePath =
             Path.Combine(
@@ -682,36 +696,25 @@ AttachmentEncryptionService encryptionService) =>
                 $"{macAddress.Replace(":", "_")}_{safeFileName}");
 
         await using FileStream stream =
-    new FileStream(
-        savedFilePath,
-        FileMode.Create);
+            new FileStream(
+                savedFilePath,
+                FileMode.Create);
 
         await encryptionService.EncryptFileAsync(
             file.OpenReadStream(),
             stream);
 
-        sensor.AttachmentFileName =
-            safeFileName;
-
-        sensor.AttachmentFilePath =
-            savedFilePath;
+        sensor.AttachmentFileName = safeFileName;
+        sensor.AttachmentFilePath = savedFilePath;
 
         return Results.Ok(new
         {
-            Message =
-                "Attachment successfully uploaded.",
-
-            FileName =
-                safeFileName,
-
-            FilePath =
-                savedFilePath,
-
-            Sensor =
-                sensor
+            Message = "Attachment successfully uploaded.",
+            FileName = safeFileName,
+            FilePath = savedFilePath,
+            Sensor = sensor
         });
     })
     .DisableAntiforgery();
-
 
 app.Run();
