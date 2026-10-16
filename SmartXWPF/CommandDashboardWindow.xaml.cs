@@ -525,6 +525,7 @@ public partial class CommandDashboardWindow : Window
     }
 
     // Loads timestamped environmental telemetry, newest first.
+
     private async Task RefreshEnvironmentalHistoryAsync()
     {
         try
@@ -535,6 +536,15 @@ public partial class CommandDashboardWindow : Window
 
             DgEnvironmentalHistory.ItemsSource = history
                 .OrderByDescending(packet => packet.Timestamp)
+                .Select(packet => new
+                {
+                    packet.DeviceMacAddress,
+                    packet.DeploymentLocation,
+                    Timestamp = packet.Timestamp.Kind == DateTimeKind.Utc
+                        ? packet.Timestamp.ToLocalTime()
+                        : packet.Timestamp,
+                    packet.SensorValue
+                })
                 .ToList();
         }
         catch (Exception ex)
@@ -543,6 +553,7 @@ public partial class CommandDashboardWindow : Window
                 $"Could not load environmental history: {ex.Message}";
         }
     }
+
 
     private async Task RefreshSelectedDeviceStateAsync()
     {

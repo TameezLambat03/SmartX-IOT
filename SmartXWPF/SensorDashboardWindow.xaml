@@ -75,48 +75,79 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+
         <!-- HEADER -->
 
         <Grid Grid.Row="0" Margin="0,0,0,20">
 
-            <StackPanel>
-                <TextBlock Text="SMART-X"
-                           FontSize="25"
-                           FontWeight="Bold"
-                           Foreground="{StaticResource AccentBrush}"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-                <TextBlock Text="IoT Management &amp; Telemetry Gateway"
-                           FontSize="12"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           Margin="0,2,0,0"/>
+            <!-- Main menu navigation and title -->
+
+            <StackPanel Grid.Column="0"
+                Orientation="Horizontal"
+                VerticalAlignment="Center">
+
+                <Button x:Name="BtnMainMenu"
+                Content="← MAIN MENU"
+                Height="38"
+                Padding="12,0"
+                Margin="0,0,18,0"
+                Background="#202930"
+                Foreground="#DCE4E8"
+                BorderBrush="#34414A"
+                BorderThickness="1"
+                FontSize="12"
+                FontWeight="Bold"
+                Click="BtnMainMenu_Click"/>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="SMART-X"
+                       FontSize="25"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource AccentBrush}"/>
+
+                    <TextBlock Text="IoT Management &amp; Telemetry Gateway"
+                       FontSize="12"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       Margin="0,2,0,0"/>
+                </StackPanel>
+
             </StackPanel>
 
-            <Border HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Background="#14251F"
-                    BorderBrush="#214C3F"
-                    BorderThickness="1"
-                    CornerRadius="15"
-                    Padding="12,7">
+            <!-- Gateway connection status -->
+
+            <Border Grid.Column="2"
+            VerticalAlignment="Center"
+            Background="#14251F"
+            BorderBrush="#214C3F"
+            BorderThickness="1"
+            CornerRadius="15"
+            Padding="12,7">
 
                 <StackPanel Orientation="Horizontal">
 
                     <Ellipse Width="8"
-                             Height="8"
-                             Fill="{StaticResource AccentBrush}"
-                             Margin="0,0,8,0"/>
+                     Height="8"
+                     Fill="{StaticResource AccentBrush}"
+                     Margin="0,0,8,0"/>
 
                     <TextBlock x:Name="LblGatewayStatus"
-                               Text="CONNECTING..."
-                               Foreground="{StaticResource WarningBrush}"
-                               FontSize="11"
-                               FontWeight="Bold"/>
+                       Text="CONNECTING..."
+                       Foreground="{StaticResource WarningBrush}"
+                       FontSize="11"
+                       FontWeight="Bold"/>
 
                 </StackPanel>
 
             </Border>
 
         </Grid>
+
 
         <!-- SUMMARY CARDS -->
 
