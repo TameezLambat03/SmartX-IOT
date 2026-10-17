@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace SmartXWPF;
 
@@ -20,9 +21,13 @@ public partial class CommandDashboardWindow : Window
     private readonly AlertApiService _alertApiService;
     private readonly RecommendationApiService _recommendationApiService;
     private readonly TelemetryApiService _telemetryApiService;
+    private readonly SearchHistoryApiService _searchHistoryApiService;
+    private readonly DispatcherTimer _searchDebounceTimer;
+
+    private string _pendingSearchArea = string.Empty;
+    private string _pendingSearchTerm = string.Empty;
 
     private List<SensorProfile> _allSensors = new();
-
     private List<CommandHistoryEntry> _allCommandHistory = new();
 
     private HashSet<string> _activeErrorMacAddresses =
@@ -37,44 +42,42 @@ public partial class CommandDashboardWindow : Window
         string? apiBaseUrl =
             ConfigurationManager.AppSettings["ApiBaseUrl"];
 
-        ApiService apiService =
-            new ApiService(apiBaseUrl!);
+        ApiService apiService = new ApiService(apiBaseUrl!);
 
-        _sensorApiService =
-            new SensorApiService(apiService);
-
-        _commandApiService =
-            new CommandApiService(apiService);
-
-        _alertApiService =
-            new AlertApiService(apiService);
-
+        _sensorApiService = new SensorApiService(apiService);
+        _commandApiService = new CommandApiService(apiService);
+        _alertApiService = new AlertApiService(apiService);
         _recommendationApiService =
             new RecommendationApiService(apiService);
+        _telemetryApiService = new TelemetryApiService(apiService);
+        _searchHistoryApiService =
+            new SearchHistoryApiService(apiService);
 
-        _telemetryApiService =
-            new TelemetryApiService(apiService);
+        _searchDebounceTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(700)
+        };
+
+        _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
         Loaded += CommandDashboardWindow_Loaded;
+        Closed += (_, _) => _searchDebounceTimer.Stop();
     }
 
     private async void CommandDashboardWindow_Loaded(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         await RefreshAllAsync();
     }
 
     private async void BtnRefreshAll_Click(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         await RefreshAllAsync();
     }
 
     private async void BtnUndo_Click(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         BtnUndo.IsEnabled = false;
 
@@ -98,8 +101,7 @@ public partial class CommandDashboardWindow : Window
         }
         catch (Exception ex)
         {
-            LblCommandStatus.Text =
-                $"Undo failed: {ex.Message}";
+            LblCommandStatus.Text = $"Undo failed: {ex.Message}";
         }
         finally
         {
@@ -116,6 +118,7 @@ public partial class CommandDashboardWindow : Window
         await RefreshAlertsAsync();
         await RefreshRecommendationsAsync();
         await RefreshEnvironmentalHistoryAsync();
+        await RefreshSearchHistoryAsync();
     }
 
     private async Task RefreshDevicesAsync()
@@ -125,15 +128,13 @@ public partial class CommandDashboardWindow : Window
 
         try
         {
-            var result =
-                await _sensorApiService.GetSensorsAsync();
+            var result = await _sensorApiService.GetSensorsAsync();
 
             if (!result.Success)
             {
                 _allSensors.Clear();
                 LstDevices.ItemsSource = null;
                 CmbActuators.ItemsSource = null;
-
                 LblDeviceCount.Text = "—";
 
                 LblCommandStatus.Text =
@@ -144,18 +145,14 @@ public partial class CommandDashboardWindow : Window
             }
 
             _allSensors = result.Sensors;
+            LblDeviceCount.Text = _allSensors.Count.ToString();
 
-            LblDeviceCount.Text =
-                _allSensors.Count.ToString();
-
-            CmbActuators.ItemsSource =
-                _allSensors
-                    .Where(sensor =>
-                        sensor.Category == SensorCategory.Actuator)
-                    .ToList();
+            CmbActuators.ItemsSource = _allSensors
+                .Where(sensor =>
+                    sensor.Category == SensorCategory.Actuator)
+                .ToList();
 
             ApplyDeviceFilters();
-
             UpdateCommandButtons();
         }
         catch (Exception ex)
@@ -174,20 +171,17 @@ public partial class CommandDashboardWindow : Window
             List<string> activeErrors =
                 await _alertApiService.GetActiveErrorsAsync();
 
-            _activeErrorMacAddresses =
-                new HashSet<string>(
-                    activeErrors,
-                    StringComparer.OrdinalIgnoreCase);
+            _activeErrorMacAddresses = new HashSet<string>(
+                activeErrors,
+                StringComparer.OrdinalIgnoreCase);
 
             _activeErrorsLoaded = true;
-
             ApplyDeviceFilters();
         }
         catch (Exception)
         {
             _activeErrorMacAddresses.Clear();
             _activeErrorsLoaded = false;
-
             ApplyDeviceFilters();
 
             LblCommandStatus.Text =
@@ -196,22 +190,24 @@ public partial class CommandDashboardWindow : Window
     }
 
     private void TxtDeviceSearch_TextChanged(
-        object sender,
-        TextChangedEventArgs e)
+        object sender, TextChangedEventArgs e)
     {
         ApplyDeviceFilters();
+
+        if (IsLoaded)
+        {
+            ScheduleSearchRecord("Devices", TxtDeviceSearch.Text);
+        }
     }
 
     private void CmbCategoryFilter_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
+        object sender, SelectionChangedEventArgs e)
     {
         ApplyDeviceFilters();
     }
 
     private void ChkActiveAlertsOnly_Changed(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         ApplyDeviceFilters();
     }
@@ -219,24 +215,19 @@ public partial class CommandDashboardWindow : Window
     private void ApplyDeviceFilters()
     {
         if (!IsLoaded)
-        {
             return;
-        }
 
-        string searchText =
-            TxtDeviceSearch.Text?.Trim() ?? string.Empty;
+        string searchText = TxtDeviceSearch.Text?.Trim() ?? string.Empty;
 
         string selectedCategory =
             (CmbCategoryFilter.SelectedItem as ComboBoxItem)
                 ?.Content?.ToString() ?? "All Categories";
 
-        bool activeAlertsOnly =
-            ChkActiveAlertsOnly.IsChecked == true;
+        bool activeAlertsOnly = ChkActiveAlertsOnly.IsChecked == true;
 
         if (activeAlertsOnly && !_activeErrorsLoaded)
         {
-            LstDevices.ItemsSource =
-                new List<SensorProfile>();
+            LstDevices.ItemsSource = new List<SensorProfile>();
 
             LblCommandStatus.Text =
                 "Active-error data is unavailable. Check the API and refresh.";
@@ -244,8 +235,7 @@ public partial class CommandDashboardWindow : Window
             return;
         }
 
-        IEnumerable<SensorProfile> filteredSensors =
-            _allSensors;
+        IEnumerable<SensorProfile> filteredSensors = _allSensors;
 
         if (selectedCategory != "All Categories")
         {
@@ -258,81 +248,59 @@ public partial class CommandDashboardWindow : Window
         if (activeAlertsOnly)
         {
             filteredSensors = filteredSensors.Where(sensor =>
-                _activeErrorMacAddresses.Contains(
-                    sensor.DeviceMacAddress));
+                _activeErrorMacAddresses.Contains(sensor.DeviceMacAddress));
         }
 
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             filteredSensors = filteredSensors.Where(sensor =>
                 (sensor.DeviceMacAddress ?? string.Empty).Contains(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase)
+                    searchText, StringComparison.OrdinalIgnoreCase)
                 ||
                 (sensor.DeploymentLocation ?? string.Empty).Contains(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase));
+                    searchText, StringComparison.OrdinalIgnoreCase));
         }
 
-        List<SensorProfile> results =
-            filteredSensors.ToList();
-
+        List<SensorProfile> results = filteredSensors.ToList();
         LstDevices.ItemsSource = results;
 
-        if (activeAlertsOnly)
-        {
-            LblCommandStatus.Text =
-                $"Showing {results.Count} device(s) matching the active-alert filters.";
-        }
-        else
-        {
-            LblCommandStatus.Text =
-                $"Showing {results.Count} of {_allSensors.Count} registered device(s).";
-        }
+        LblCommandStatus.Text = activeAlertsOnly
+            ? $"Showing {results.Count} device(s) matching the active-alert filters."
+            : $"Showing {results.Count} of {_allSensors.Count} registered device(s).";
     }
 
     private async void CmbActuators_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
+        object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)
-        {
             return;
-        }
 
         if (CmbActuators.SelectedItem is SensorProfile sensor)
         {
-            LblSelectedLocation.Text =
-                sensor.DeploymentLocation;
-
+            LblSelectedLocation.Text = sensor.DeploymentLocation;
             LblDeviceState.Text = "Loading...";
-
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
 
             UpdateCommandButtons();
-
             await RefreshSelectedDeviceStateAsync();
         }
         else
         {
             LblSelectedLocation.Text = "No actuator selected";
             LblDeviceState.Text = "Unknown";
-
             UpdateCommandButtons();
         }
     }
 
     private async void BtnTurnOn_Click(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         await SendCommandAsync("ON");
     }
 
     private async void BtnTurnOff_Click(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         await SendCommandAsync("OFF");
     }
@@ -343,7 +311,6 @@ public partial class CommandDashboardWindow : Window
         {
             LblCommandStatus.Text =
                 "Select an actuator before sending a command.";
-
             return;
         }
 
@@ -371,7 +338,6 @@ public partial class CommandDashboardWindow : Window
 
                 LblCommandStatus.Text =
                     $"Command failed ({(int)response.StatusCode}): {error}";
-
                 return;
             }
 
@@ -392,7 +358,6 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
-    // Loads the complete command history from the API.
     private async Task RefreshCommandHistoryAsync()
     {
         try
@@ -404,7 +369,6 @@ public partial class CommandDashboardWindow : Window
             {
                 LblCommandStatus.Text +=
                     " Command history could not be retrieved.";
-
                 return;
             }
 
@@ -413,9 +377,7 @@ public partial class CommandDashboardWindow : Window
                 .ToList();
 
             ApplyCommandHistoryFilters();
-
-            LblCommandCount.Text =
-                _allCommandHistory.Count.ToString();
+            LblCommandCount.Text = _allCommandHistory.Count.ToString();
         }
         catch (Exception ex)
         {
@@ -425,15 +387,19 @@ public partial class CommandDashboardWindow : Window
     }
 
     private void TxtCommandSearch_TextChanged(
-        object sender,
-        TextChangedEventArgs e)
+        object sender, TextChangedEventArgs e)
     {
         ApplyCommandHistoryFilters();
+
+        if (IsLoaded)
+        {
+            ScheduleSearchRecord(
+                "Command History", TxtCommandSearch.Text);
+        }
     }
 
     private void CmbCommandFilter_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
+        object sender, SelectionChangedEventArgs e)
     {
         ApplyCommandHistoryFilters();
     }
@@ -441,12 +407,9 @@ public partial class CommandDashboardWindow : Window
     private void ApplyCommandHistoryFilters()
     {
         if (!IsLoaded)
-        {
             return;
-        }
 
-        string searchText =
-            TxtCommandSearch.Text?.Trim() ?? string.Empty;
+        string searchText = TxtCommandSearch.Text?.Trim() ?? string.Empty;
 
         string selectedCommand =
             (CmbCommandFilter.SelectedItem as ComboBoxItem)
@@ -459,8 +422,7 @@ public partial class CommandDashboardWindow : Window
         {
             filteredHistory = filteredHistory.Where(entry =>
                 string.Equals(
-                    entry.Command,
-                    selectedCommand,
+                    entry.Command, selectedCommand,
                     StringComparison.OrdinalIgnoreCase));
         }
 
@@ -468,22 +430,86 @@ public partial class CommandDashboardWindow : Window
         {
             filteredHistory = filteredHistory.Where(entry =>
                 (entry.Command ?? string.Empty).Contains(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase)
+                    searchText, StringComparison.OrdinalIgnoreCase)
                 ||
                 (entry.DeviceMacAddress ?? string.Empty).Contains(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase)
+                    searchText, StringComparison.OrdinalIgnoreCase)
                 ||
                 entry.Timestamp.ToString().Contains(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase));
+                    searchText, StringComparison.OrdinalIgnoreCase));
         }
 
-        List<CommandHistoryEntry> results =
-            filteredHistory.ToList();
+        LstCommandHistory.ItemsSource = filteredHistory.ToList();
+    }
 
-        LstCommandHistory.ItemsSource = results;
+    private void ScheduleSearchRecord(
+        string searchArea, string? searchTerm)
+    {
+        string term = searchTerm?.Trim() ?? string.Empty;
+
+        _searchDebounceTimer.Stop();
+
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            _pendingSearchArea = string.Empty;
+            _pendingSearchTerm = string.Empty;
+            return;
+        }
+
+        _pendingSearchArea = searchArea;
+        _pendingSearchTerm = term;
+        _searchDebounceTimer.Start();
+    }
+
+    private async void SearchDebounceTimer_Tick(
+        object? sender, EventArgs e)
+    {
+        _searchDebounceTimer.Stop();
+
+        string area = _pendingSearchArea;
+        string term = _pendingSearchTerm;
+
+        if (string.IsNullOrWhiteSpace(area) ||
+            string.IsNullOrWhiteSpace(term))
+            return;
+
+        try
+        {
+            await _searchHistoryApiService.RecordSearchAsync(area, term);
+            await RefreshSearchHistoryAsync();
+            await RefreshRecommendationsAsync();
+        }
+        catch (Exception ex)
+        {
+            LblCommandStatus.Text =
+                $"Could not record search history: {ex.Message}";
+        }
+    }
+
+    private async Task RefreshSearchHistoryAsync()
+    {
+        try
+        {
+            var history =
+                await _searchHistoryApiService.GetHistoryAsync();
+
+            DgSearchHistory.ItemsSource = history
+                .OrderByDescending(entry => entry.Timestamp)
+                .Select(entry => new
+                {
+                    entry.SearchArea,
+                    entry.SearchTerm,
+                    Timestamp = entry.Timestamp.Kind == DateTimeKind.Utc
+                        ? entry.Timestamp.ToLocalTime()
+                        : entry.Timestamp
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            LblCommandStatus.Text =
+                $"Could not load search history: {ex.Message}";
+        }
     }
 
     private async Task RefreshAlertsAsync()
@@ -495,10 +521,9 @@ public partial class CommandDashboardWindow : Window
 
             DgAlerts.ItemsSource = alerts;
 
-            LblActiveAlerts.Text =
-                _activeErrorsLoaded
-                    ? _activeErrorMacAddresses.Count.ToString()
-                    : "—";
+            LblActiveAlerts.Text = _activeErrorsLoaded
+                ? _activeErrorMacAddresses.Count.ToString()
+                : "—";
         }
         catch (Exception ex)
         {
@@ -512,8 +537,7 @@ public partial class CommandDashboardWindow : Window
         try
         {
             List<PredictiveRecommendation> recommendations =
-                await _recommendationApiService
-                    .GetRecommendationsAsync();
+                await _recommendationApiService.GetRecommendationsAsync();
 
             DgRecommendations.ItemsSource = recommendations;
         }
@@ -524,15 +548,12 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
-    // Loads timestamped environmental telemetry, newest first.
-
     private async Task RefreshEnvironmentalHistoryAsync()
     {
         try
         {
             List<TelemetryPacket<float>> history =
-                await _telemetryApiService
-                    .GetEnvironmentalHistoryAsync();
+                await _telemetryApiService.GetEnvironmentalHistoryAsync();
 
             DgEnvironmentalHistory.ItemsSource = history
                 .OrderByDescending(packet => packet.Timestamp)
@@ -554,16 +575,13 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
-
     private async Task RefreshSelectedDeviceStateAsync()
     {
         if (CmbActuators.SelectedItem is not SensorProfile sensor)
         {
             LblDeviceState.Text = "Unknown";
-
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
-
             return;
         }
 
@@ -576,26 +594,22 @@ public partial class CommandDashboardWindow : Window
             if (!result.Success)
             {
                 LblDeviceState.Text = "Unavailable";
-
                 LblDeviceState.Foreground =
                     System.Windows.Media.Brushes.Orange;
-
                 return;
             }
 
             LblDeviceState.Text = result.State;
 
-            LblDeviceState.Foreground =
-                result.State == "ON"
-                    ? System.Windows.Media.Brushes.LightGreen
-                    : result.State == "OFF"
-                        ? System.Windows.Media.Brushes.LightCoral
-                        : System.Windows.Media.Brushes.Orange;
+            LblDeviceState.Foreground = result.State == "ON"
+                ? System.Windows.Media.Brushes.LightGreen
+                : result.State == "OFF"
+                    ? System.Windows.Media.Brushes.LightCoral
+                    : System.Windows.Media.Brushes.Orange;
         }
         catch (Exception)
         {
             LblDeviceState.Text = "Unavailable";
-
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
         }
@@ -611,8 +625,7 @@ public partial class CommandDashboardWindow : Window
     }
 
     private void BtnMainMenu_Click(
-        object sender,
-        RoutedEventArgs e)
+        object sender, RoutedEventArgs e)
     {
         MainWindow mainWindow = new MainWindow();
         mainWindow.Show();

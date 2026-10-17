@@ -326,6 +326,36 @@ public class PredictiveRecommendationService
         });
     }
 
+    public void AnalyseRepeatedSearch(
+        string searchArea,
+        string searchTerm,
+        int repeatedCount,
+        DateTime timestamp)
+    {
+        if (repeatedCount != 3)
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            AddRecommendation(new PredictiveRecommendation
+            {
+                DeviceMacAddress = "N/A",
+                DeploymentLocation = searchArea,
+                Timestamp = timestamp,
+                SensorValue = 0,
+                Severity = "Warning",
+                Recommendation =
+                    $"The search '{searchTerm}' has been repeated " +
+                    $"3 times in {searchArea} within 30 minutes.",
+                RecommendedAction =
+                    "Review this repeated search to determine whether " +
+                    "the operator needs a quicker way to access this information."
+            });
+        }
+    }
+
     public List<PredictiveRecommendation> GetRecommendations()
     {
         lock (_lock)

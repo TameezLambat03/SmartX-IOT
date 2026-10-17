@@ -22,7 +22,7 @@ builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<AttachmentEncryptionService>();
 builder.Services.AddSingleton<StartupSeeder>();
 builder.Services.AddSingleton<PredictiveRecommendationService>();
-
+builder.Services.AddSingleton<SearchHistoryService>();
 var app = builder.Build();
 
 using (IServiceScope scope = app.Services.CreateScope())
@@ -123,6 +123,49 @@ app.MapPost(
             MacAddress =
                 packet.DeviceMacAddress
         });
+    });
+
+app.MapPost("/api/search-history",
+    (SearchHistoryEntry request,
+     SearchHistoryService searchHistoryService) =>
+    {
+        if (string.IsNullOrWhiteSpace(request.SearchArea) ||
+            string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            return Results.BadRequest(new
+            {
+                message = "Search area and search term are required."
+            });
+        }
+
+        if (request.SearchArea.Length > 50 ||
+            request.SearchTerm.Length > 100)
+        {
+            return Results.BadRequest(new
+            {
+                message = "Search area or search term is too long."
+            });
+        }
+
+        string area = request.SearchArea.Trim();
+
+        if (area != "Devices" && area != "Command History")
+        {
+            return Results.BadRequest(new
+            {
+                message = "Unsupported search area."
+            });
+        }
+
+        searchHistoryService.RecordSearch(area, request.SearchTerm);
+
+        return Results.Ok(new { message = "Search recorded." });
+    });
+
+app.MapGet("/api/search-history",
+    (SearchHistoryService searchHistoryService) =>
+    {
+        return Results.Ok(searchHistoryService.GetHistory());
     });
 
 
