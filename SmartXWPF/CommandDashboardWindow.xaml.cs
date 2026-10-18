@@ -105,7 +105,7 @@ public partial class CommandDashboardWindow : Window
         }
         finally
         {
-            BtnUndo.IsEnabled = true;
+            UpdateCommandButtons();
         }
     }
 
@@ -121,10 +121,15 @@ public partial class CommandDashboardWindow : Window
         await RefreshSearchHistoryAsync();
     }
 
+
     private async Task RefreshDevicesAsync()
     {
         LblCommandStatus.Text =
             "Loading registered devices from the API...";
+
+        // Preserve the current selection when refreshing.
+        string? selectedMac =
+            (CmbDevices.SelectedItem as SensorProfile)?.DeviceMacAddress;
 
         try
         {
@@ -134,9 +139,10 @@ public partial class CommandDashboardWindow : Window
             {
                 _allSensors.Clear();
                 LstDevices.ItemsSource = null;
-                CmbActuators.ItemsSource = null;
-                LblDeviceCount.Text = "—";
+                CmbDevices.ItemsSource = null;
+                ItemsCommandButtons.ItemsSource = null;
 
+                LblDeviceCount.Text = "—";
                 LblCommandStatus.Text =
                     "Could not retrieve devices. Check that the API is running.";
 
@@ -147,13 +153,26 @@ public partial class CommandDashboardWindow : Window
             _allSensors = result.Sensors;
             LblDeviceCount.Text = _allSensors.Count.ToString();
 
-            CmbActuators.ItemsSource = _allSensors
-                .Where(sensor =>
-                    sensor.Category == SensorCategory.Actuator)
-                .ToList();
+            // All registered device categories can now be selected.
+            CmbDevices.ItemsSource = _allSensors;
+
+            SensorProfile? previousSelection = _allSensors.FirstOrDefault(
+                sensor => string.Equals(
+                    sensor.DeviceMacAddress,
+                    selectedMac,
+                    StringComparison.OrdinalIgnoreCase));
+
+            CmbDevices.SelectedItem = previousSelection;
 
             ApplyDeviceFilters();
             UpdateCommandButtons();
+
+            if (previousSelection == null)
+            {
+                LblSelectedLocation.Text = "No device selected";
+                LblSelectedCategory.Text = "—";
+                LblDeviceState.Text = "Unknown";
+            }
         }
         catch (Exception ex)
         {
@@ -163,6 +182,7 @@ public partial class CommandDashboardWindow : Window
             UpdateCommandButtons();
         }
     }
+
 
     private async Task RefreshActiveErrorsAsync()
     {
@@ -269,15 +289,18 @@ public partial class CommandDashboardWindow : Window
             : $"Showing {results.Count} of {_allSensors.Count} registered device(s).";
     }
 
-    private async void CmbActuators_SelectionChanged(
+
+    private async void CmbDevices_SelectionChanged(
         object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)
             return;
 
-        if (CmbActuators.SelectedItem is SensorProfile sensor)
+        if (CmbDevices.SelectedItem is SensorProfile sensor)
         {
             LblSelectedLocation.Text = sensor.DeploymentLocation;
+            LblSelectedCategory.Text = sensor.Category.ToString();
+
             LblDeviceState.Text = "Loading...";
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
@@ -287,11 +310,15 @@ public partial class CommandDashboardWindow : Window
         }
         else
         {
-            LblSelectedLocation.Text = "No actuator selected";
+            LblSelectedLocation.Text = "No device selected";
+            LblSelectedCategory.Text = "—";
             LblDeviceState.Text = "Unknown";
+
+            ItemsCommandButtons.ItemsSource = null;
             UpdateCommandButtons();
         }
     }
+
 
     private async void BtnTurnOn_Click(
         object sender, RoutedEventArgs e)
@@ -305,17 +332,34 @@ public partial class CommandDashboardWindow : Window
         await SendCommandAsync("OFF");
     }
 
+
+    private async void DynamicCommandButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button &&
+            button.Content is string command)
+        {
+            await SendCommandAsync(command);
+        }
+    }
+
     private async Task SendCommandAsync(string command)
     {
-        if (CmbActuators.SelectedItem is not SensorProfile sensor)
+        if (CmbDevices.SelectedItem is not SensorProfile sensor)
         {
             LblCommandStatus.Text =
-                "Select an actuator before sending a command.";
+                "Select a device before sending a command.";
             return;
         }
 
-        BtnTurnOn.IsEnabled = false;
-        BtnTurnOff.IsEnabled = false;
+        if (!CommandServiceSupportsCommand(sensor.Category, command))
+        {
+            LblCommandStatus.Text =
+                $"Command '{command}' is not supported for {sensor.Category}.";
+            return;
+        }
+
+        ItemsCommandButtons.IsEnabled = false;
 
         LblCommandStatus.Text =
             $"Sending simulated {command} command...";
@@ -357,6 +401,30 @@ public partial class CommandDashboardWindow : Window
             UpdateCommandButtons();
         }
     }
+
+    private static bool CommandServiceSupportsCommand(
+        SensorCategory category, string command)
+    {
+        string normalized = command.Trim().ToUpperInvariant();
+
+        return category switch
+        {
+            SensorCategory.Actuator =>
+                normalized is "ON" or "OFF",
+
+            SensorCategory.Environmental =>
+                normalized is "READ" or "CALIBRATE" or "RESET",
+
+            SensorCategory.PowerConsumption =>
+                normalized is "READ"
+                    or "RESET"
+                    or "START_MONITORING"
+                    or "STOP_MONITORING",
+
+            _ => false
+        };
+    }
+
 
     private async Task RefreshCommandHistoryAsync()
     {
@@ -575,13 +643,32 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
+
     private async Task RefreshSelectedDeviceStateAsync()
     {
-        if (CmbActuators.SelectedItem is not SensorProfile sensor)
+        if (CmbDevices.SelectedItem is not SensorProfile sensor)
         {
             LblDeviceState.Text = "Unknown";
             LblDeviceState.Foreground =
                 System.Windows.Media.Brushes.Orange;
+            return;
+        }
+
+        // The current state endpoint only exposes actuator ON/OFF state.
+        if (sensor.Category != SensorCategory.Actuator)
+        {
+            LblDeviceState.Text =
+                _allCommandHistory.Any(entry =>
+                    string.Equals(
+                        entry.DeviceMacAddress,
+                        sensor.DeviceMacAddress,
+                        StringComparison.OrdinalIgnoreCase))
+                    ? "See command history for the latest operation"
+                    : "No commands issued yet";
+
+            LblDeviceState.Foreground =
+                System.Windows.Media.Brushes.LightBlue;
+
             return;
         }
 
@@ -615,14 +702,43 @@ public partial class CommandDashboardWindow : Window
         }
     }
 
+
+
     private void UpdateCommandButtons()
     {
-        bool actuatorSelected =
-            CmbActuators.SelectedItem is SensorProfile;
+        if (CmbDevices.SelectedItem is not SensorProfile sensor)
+        {
+            ItemsCommandButtons.ItemsSource = null;
+            ItemsCommandButtons.IsEnabled = false;
+            BtnUndo.IsEnabled = false;
+            return;
+        }
 
-        BtnTurnOn.IsEnabled = actuatorSelected;
-        BtnTurnOff.IsEnabled = actuatorSelected;
+        string[] commands = sensor.Category switch
+        {
+            SensorCategory.Actuator =>
+                new[] { "ON", "OFF" },
+
+            SensorCategory.Environmental =>
+                new[] { "READ", "CALIBRATE", "RESET" },
+
+            SensorCategory.PowerConsumption =>
+                new[]
+                {
+                "READ",
+                "RESET",
+                "START_MONITORING",
+                "STOP_MONITORING"
+                },
+
+            _ => Array.Empty<string>()
+        };
+
+        ItemsCommandButtons.ItemsSource = commands;
+        ItemsCommandButtons.IsEnabled = commands.Length > 0;
+        BtnUndo.IsEnabled = true;
     }
+
 
     private void BtnMainMenu_Click(
         object sender, RoutedEventArgs e)

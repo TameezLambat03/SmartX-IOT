@@ -500,6 +500,7 @@ app.MapGet(
     });
 
 
+
 // COMMAND EXECUTION
 
 app.MapPost(
@@ -508,6 +509,7 @@ app.MapPost(
         CommandRequest request,
         SensorService sensorService,
         CommandService commandService,
+        TelemetryIngestionService telemetryService,
         PredictiveRecommendationService recommendationService
     ) =>
     {
@@ -531,20 +533,12 @@ app.MapPost(
         {
             return Results.BadRequest(new
             {
-                Message = "Command must be ON or OFF."
+                Message = "Command is required."
             });
         }
 
         string macAddress = request.DeviceMacAddress.Trim();
         string command = request.Command.Trim().ToUpperInvariant();
-
-        if (command != "ON" && command != "OFF")
-        {
-            return Results.BadRequest(new
-            {
-                Message = "Only ON and OFF commands are supported."
-            });
-        }
 
         SensorProfile? sensor =
             sensorService.GetSensorByMacAddress(macAddress);
@@ -557,34 +551,118 @@ app.MapPost(
             });
         }
 
-        if (sensor.Category != SensorCategory.Actuator)
+        if (!Enum.IsDefined(sensor.Category))
         {
             return Results.BadRequest(new
             {
-                Message =
-                    "Commands can only be sent to registered actuator devices."
+                Message = "The registered device has an invalid category."
             });
+        }
+
+        if (!CommandService.SupportsCommand(sensor.Category, command))
+        {
+            string[] supportedCommands = sensor.Category switch
+            {
+                SensorCategory.Actuator =>
+                    new[] { "ON", "OFF" },
+
+                SensorCategory.Environmental =>
+                    new[] { "READ", "CALIBRATE", "RESET" },
+
+                SensorCategory.PowerConsumption =>
+                    new[]
+                    {
+                        "READ",
+                        "RESET",
+                        "START_MONITORING",
+                        "STOP_MONITORING"
+                    },
+
+                _ => Array.Empty<string>()
+            };
+
+            return Results.BadRequest(new
+            {
+                Message =
+                    $"Command '{command}' is not supported for category '{sensor.Category}'.",
+                DeviceMacAddress = sensor.DeviceMacAddress,
+                DeviceCategory = sensor.Category,
+                SupportedCommands = supportedCommands
+            });
+        }
+
+        string? commandStatus = null;
+
+        // READ retrieves the latest processed reading for this device.
+        if (command == "READ")
+        {
+            if (sensor.Category == SensorCategory.Environmental)
+            {
+                var reading = telemetryService
+                    .GetEnvironmentalTimestampedLogs()
+                    .Where(packet =>
+                        string.Equals(
+                            packet.DeviceMacAddress,
+                            sensor.DeviceMacAddress,
+                            StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(packet => packet.Timestamp)
+                    .FirstOrDefault();
+
+                commandStatus = reading == null
+                    ? "No processed environmental reading is available for this device."
+                    : $"Latest environmental reading: {reading.SensorValue}; " +
+                      $"timestamp: {reading.Timestamp:O}.";
+            }
+            else if (sensor.Category == SensorCategory.PowerConsumption)
+            {
+                var reading = telemetryService
+                    .GetPowerTimestampedLogs()
+                    .Where(packet =>
+                        string.Equals(
+                            packet.DeviceMacAddress,
+                            sensor.DeviceMacAddress,
+                            StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(packet => packet.Timestamp)
+                    .FirstOrDefault();
+
+                commandStatus = reading == null
+                    ? "No processed power reading is available for this device."
+                    : $"Latest power reading: {reading.SensorValue}; " +
+                      $"timestamp: {reading.Timestamp:O}.";
+            }
         }
 
         CommandHistoryEntry entry =
             commandService.ExecuteCommand(
                 sensor.DeviceMacAddress,
-                command == "ON");
+                sensor.Category,
+                command,
+                commandStatus);
 
-        // Record the actual manual command for predictive analysis.
-        recommendationService.RecordManualCommand(
-            sensor.DeviceMacAddress,
-            command,
-            entry.Timestamp);
+        // Keep predictive command-pattern analysis focused on
+        // actuator ON/OFF operations.
+        if (sensor.Category == SensorCategory.Actuator &&
+            (command == "ON" || command == "OFF"))
+        {
+            recommendationService.RecordManualCommand(
+                sensor.DeviceMacAddress,
+                command,
+                entry.Timestamp);
+        }
 
         return Results.Ok(new
         {
             Message =
                 $"Simulated {command} command recorded successfully.",
 
+            DeviceMacAddress = sensor.DeviceMacAddress,
+
+            DeviceCategory = sensor.Category,
+
             Command = entry
         });
     });
+
 
 
 // RECOMMENDATIONS

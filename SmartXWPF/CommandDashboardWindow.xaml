@@ -143,34 +143,35 @@
                 <ColumnDefinition Width="1.4*"/>
             </Grid.ColumnDefinitions>
 
+
             <!-- Manual command panel -->
             <Border Grid.Column="0"
-                    Background="#171D22"
-                    BorderBrush="#2B363D"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="18"
-                    Margin="0,0,10,0">
+        Background="#171D22"
+        BorderBrush="#2B363D"
+        BorderThickness="1"
+        CornerRadius="8"
+        Padding="18"
+        Margin="0,0,10,0">
 
                 <StackPanel>
-                    <TextBlock Text="MANUAL OVERRIDE"
-                               Foreground="#20C997"
-                               FontSize="12"
-                               FontWeight="Bold"/>
+                    <TextBlock Text="DEVICE COMMANDS"
+                   Foreground="#20C997"
+                   FontSize="12"
+                   FontWeight="Bold"/>
 
-                    <TextBlock Text="Select a registered actuator"
-                               Foreground="#8E9AA3"
-                               FontSize="13"
-                               Margin="0,6,0,12"/>
+                    <TextBlock Text="Select any registered device"
+                   Foreground="#8E9AA3"
+                   FontSize="13"
+                   Margin="0,6,0,12"/>
 
-                    <ComboBox x:Name="CmbActuators"
-                              SelectionChanged="CmbActuators_SelectionChanged"
-                              DisplayMemberPath="DeviceMacAddress"
-                              Background="#FFFFFF"
-                              Foreground="#1F2937"
-                              BorderBrush="#64748B"
-                              Padding="8"
-                              FontSize="14">
+                    <ComboBox x:Name="CmbDevices"
+                  SelectionChanged="CmbDevices_SelectionChanged"
+                  DisplayMemberPath="DeviceMacAddress"
+                  Background="#FFFFFF"
+                  Foreground="#1F2937"
+                  BorderBrush="#64748B"
+                  Padding="8"
+                  FontSize="14">
                         <ComboBox.ItemContainerStyle>
                             <Style TargetType="ComboBoxItem">
                                 <Setter Property="Foreground" Value="#1F2937"/>
@@ -186,91 +187,102 @@
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
 
-                    <TextBlock Text="Deployment location"
-                               Foreground="#8E9AA3"
-                               FontSize="12"
-                               Margin="0,16,0,6"/>
+                    <TextBlock Text="DEPLOYMENT LOCATION"
+                   Foreground="#8E9AA3"
+                   FontSize="11"
+                   Margin="0,16,0,6"/>
 
                     <TextBlock x:Name="LblSelectedLocation"
-                               Text="No actuator selected"
-                               Foreground="#F1F5F7"
-                               FontSize="13"
-                               TextWrapping="Wrap"/>
+                   Text="No device selected"
+                   Foreground="#F1F5F7"
+                   FontSize="13"
+                   TextWrapping="Wrap"/>
+
+                    <TextBlock Text="DEVICE CATEGORY"
+                   Foreground="#8E9AA3"
+                   FontSize="11"
+                   Margin="0,14,0,6"/>
+
+                    <TextBlock x:Name="LblSelectedCategory"
+                   Text="—"
+                   Foreground="#20C997"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"/>
 
                     <TextBlock Text="SIMULATED DEVICE STATE"
-                               Foreground="#8E9AA3"
-                               FontSize="11"
-                               Margin="0,22,0,8"/>
+                   Foreground="#8E9AA3"
+                   FontSize="11"
+                   Margin="0,20,0,8"/>
 
                     <TextBlock x:Name="LblDeviceState"
-                               Text="Unknown"
-                               Foreground="#F59E0B"
-                               FontSize="22"
-                               FontWeight="SemiBold"/>
+                   Text="Unknown"
+                   Foreground="#F59E0B"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"/>
 
-                    <Grid Margin="0,18,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                    <TextBlock Text="AVAILABLE COMMANDS"
+                   Foreground="#8E9AA3"
+                   FontSize="11"
+                   Margin="0,20,0,8"/>
 
-                        <Button x:Name="BtnTurnOn"
-                                Grid.Column="0"
-                                Content="TURN ON"
-                                Click="BtnTurnOn_Click"
-                                Height="42"
-                                Margin="0,0,5,0"
-                                Background="#19362F"
-                                Foreground="#20C997"
-                                BorderBrush="#245C4D"
-                                FontWeight="Bold"
-                                Cursor="Hand"
-                                IsEnabled="False"/>
+                    <!-- Buttons are populated according to the selected device category. -->
+                    <ItemsControl x:Name="ItemsCommandButtons">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
 
-                        <Button x:Name="BtnTurnOff"
-                                Grid.Column="1"
-                                Content="TURN OFF"
-                                Click="BtnTurnOff_Click"
-                                Height="42"
-                                Margin="5,0,0,0"
-                                Background="#382124"
-                                Foreground="#FF7B84"
-                                BorderBrush="#63343A"
-                                FontWeight="Bold"
-                                Cursor="Hand"
-                                IsEnabled="False"/>
-                    </Grid>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding}"
+                            Click="DynamicCommandButton_Click"
+                            MinWidth="105"
+                            Height="38"
+                            Margin="0,0,8,8"
+                            Padding="10,6"
+                            Background="#20282D"
+                            Foreground="#20C997"
+                            BorderBrush="#245C4D"
+                            FontWeight="Bold"
+                            Cursor="Hand"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
                     <Button x:Name="BtnUndo"
-                            Content="↶ UNDO LAST COMMAND"
-                            Click="BtnUndo_Click"
-                            Height="38"
-                            Margin="0,10,0,0"
-                            Background="#20282D"
-                            Foreground="#F1F5F7"
-                            BorderBrush="#20C997"
-                            BorderThickness="1"
-                            FontWeight="Bold"
-                            Cursor="Hand"
-                            IsEnabled="True"/>
+                Content="↶ UNDO LAST COMMAND"
+                Click="BtnUndo_Click"
+                Height="38"
+                Margin="0,10,0,0"
+                Background="#20282D"
+                Foreground="#F1F5F7"
+                BorderBrush="#20C997"
+                BorderThickness="1"
+                FontWeight="Bold"
+                Cursor="Hand"
+                IsEnabled="False"/>
 
                     <Button Content="REFRESH ALL DATA"
-                            Click="BtnRefreshAll_Click"
-                            Height="36"
-                            Margin="0,14,0,0"
-                            Background="#20282D"
-                            Foreground="#F1F5F7"
-                            BorderBrush="#354149"
-                            Cursor="Hand"/>
+                Click="BtnRefreshAll_Click"
+                Height="36"
+                Margin="0,14,0,0"
+                Background="#20282D"
+                Foreground="#F1F5F7"
+                BorderBrush="#354149"
+                Cursor="Hand"/>
 
                     <TextBlock x:Name="LblCommandStatus"
-                               Text="Select an actuator to begin."
-                               Foreground="#8E9AA3"
-                               FontSize="12"
-                               TextWrapping="Wrap"
-                               Margin="0,16,0,0"/>
+                   Text="Select a device to begin."
+                   Foreground="#8E9AA3"
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Margin="0,16,0,0"/>
                 </StackPanel>
             </Border>
+
 
             <!-- Dashboard tabs -->
             <Border Grid.Column="1"
@@ -328,7 +340,7 @@
                                           SelectionChanged="CmbCategoryFilter_SelectionChanged">
                                     <ComboBoxItem Content="All Categories"/>
                                     <ComboBoxItem Content="Environmental"/>
-                                    <ComboBoxItem Content="Power"/>
+                                    <ComboBoxItem Content="PowerConsumption"/>
                                     <ComboBoxItem Content="Actuator"/>
                                 </ComboBox>
 
