@@ -442,9 +442,20 @@
                                         <GridViewColumn Header="TIMESTAMP (UTC)"
                                                         Width="175"
                                                         DisplayMemberBinding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"/>
-                                        <GridViewColumn Header="STATUS"
-                                                        Width="170"
-                                                        DisplayMemberBinding="{Binding Status}"/>
+
+                                        <GridViewColumn Header="STATUS" Width="280">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Status}"
+                       TextWrapping="Wrap"
+                       Padding="6,4"
+                       VerticalAlignment="Center"
+                       MinWidth="250"
+                       MaxWidth="280"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
                                     </GridView>
                                 </ListView.View>
                             </ListView>
@@ -591,12 +602,32 @@
                                     <DataGridTextColumn Header="DEVICE"
                                                         Binding="{Binding DeviceMacAddress}"
                                                         Width="145"/>
+
                                     <DataGridTextColumn Header="LOCATION"
-                                                        Binding="{Binding DeploymentLocation}"
-                                                        Width="170"/>
+                    Binding="{Binding DeploymentLocation}"
+                    Width="170">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                                <Setter Property="Padding" Value="6,4"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+
+
                                     <DataGridTextColumn Header="MESSAGE"
-                                                        Binding="{Binding Message}"
-                                                        Width="200"/>
+                    Binding="{Binding Message}"
+                    Width="250">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                                <Setter Property="Padding" Value="6,4"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>

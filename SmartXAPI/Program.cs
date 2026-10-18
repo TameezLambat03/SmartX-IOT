@@ -688,6 +688,7 @@ app.MapGet(
 
 // SIMULATED DEVICE STATE
 
+
 app.MapGet(
     "/api/commands/{macAddress}/state",
     (
@@ -707,26 +708,24 @@ app.MapGet(
             });
         }
 
-        if (sensor.Category != SensorCategory.Actuator)
-        {
-            return Results.BadRequest(new
-            {
-                Message = "The specified device is not an actuator."
-            });
-        }
+        bool? isOn =
+            sensor.Category == SensorCategory.Actuator
+                ? commandService.GetDeviceState(sensor.DeviceMacAddress)
+                : null;
 
-        bool? state =
-            commandService.GetDeviceState(macAddress);
+        string state = commandService.GetDeviceStatus(
+            sensor.DeviceMacAddress,
+            sensor.Category);
 
         return Results.Ok(new
         {
-            DeviceMacAddress = macAddress,
-            IsOn = state,
-            State = state.HasValue
-                ? (state.Value ? "ON" : "OFF")
-                : "Unknown - no command issued yet"
+            DeviceMacAddress = sensor.DeviceMacAddress,
+            DeviceCategory = sensor.Category,
+            IsOn = isOn,
+            State = state
         });
     });
+
 
 
 // UNDO LAST COMMAND
