@@ -12,6 +12,22 @@ https://youtu.be/9u5Y_kR71FQ?si=IEofcTExXlIfL66h
 
 # Features
 
+## Authentication
+
+Smart-X uses Supabase Authentication to provide email-and-password registration and login for the WPF desktop application.
+
+The authentication flow includes:
+
+- **Account registration:** Users can register using an email address and password.
+- **Login:** Supabase verifies the supplied credentials before the application opens the main dashboard.
+- **Persistent accounts:** Registered accounts are stored by Supabase and remain available when the application is restarted.
+- **Client configuration:** The WPF application uses the Supabase project URL and publishable key to connect to the authentication service.
+
+The project URL and publishable key are public client configuration values, so a separate secret key is not required for this authentication flow. An internet connection and an available Supabase project are required.
+
+**Security scope:** Authentication currently controls access through the WPF application's login screen. The ASP.NET Core API endpoints do not independently validate Supabase access tokens, so the login screen should not be treated as security protecting the API from direct access. Database permissions and other sensitive operations must be protected separately.
+
+
 ## Sensor Registration and Telemetry
 
 Smart-X supports three device categories:
@@ -326,7 +342,31 @@ Keep the API running while using the desktop application.
 
 Ensure the configured `ApiBaseUrl` matches the address at which the API is listening.
 
-## 7. Run the WPF Client
+## 7. Configure Authentication
+
+Smart-X uses Supabase Authentication for WPF login and registration.
+
+The Supabase project URL and publishable key are configured in `SmartXWPF/ LoginWindow.xaml.cs` (in the `LoginWindow` constructor). These are public client configuration values and do not require a separate local secrets file.
+
+To use authentication:
+
+1. Ensure the Supabase project is available.
+2. Ensure email-and-password authentication is enabled in the Supabase dashboard.
+3. Ensure the email confirmation setting matches the intended registration workflow.
+4. Run the WPF application with an internet connection.
+5. Register an account using an email address and password.
+6. Log in using the registered credentials.
+
+Supabase stores registered accounts remotely, so rebuilding or restarting Smart-X does not require users to register again.
+
+Do not place a Supabase secret key or service-role key in the WPF application or commit one to source control.
+
+## 8. Run the WPF Client
+
+Start `SmartXWPF` from Visual Studio. The login window appears first. Register or log in, then select the desired dashboard from the main menu.
+
+
+## 9. Run the WPF Client
 
 Start `SmartXWPF` from Visual Studio and select the desired dashboard from the main menu.
 
