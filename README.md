@@ -1,179 +1,26 @@
 # Smart-X — IoT Ecosystem Gateway
 
-Smart-X is a .NET-based IoT ecosystem designed to simulate the monitoring and management of distributed smart environments such as **hydroponic farms, automated real-estate utility systems, and smart-grid installations**.
+Smart-X is a .NET-based IoT gateway simulation designed to monitor and manage distributed smart environments such as **hydroponic farms, automated utility systems, and smart-grid installations**.
 
-The system models a central IoT gateway receiving continuous telemetry from distributed sensors and processing different types of sensor data efficiently.
-
-The application combines a **WPF desktop dashboard** with an **ASP.NET Core Web API**, providing an operator-focused interface for:
-
-* Sensor registration
-* Multi-typed telemetry ingestion
-* Telemetry validation
-* Mock telemetry generation
-* Live telemetry monitoring
-* Anomaly feedback
-* Telemetry history
-* Device artifact attachment
-* Encrypted artifact storage
-* Telemetry aggregation
-
----
+The system combines a WPF desktop application with an ASP.NET Core Web API to simulate device registration, multi-typed telemetry ingestion, background processing, command execution, alert prioritisation, and predictive recommendations.
 
 ## YouTube Demo
 
-[Smart-X Demonstration](https://youtu.be/2Be9O4EpeEo?si=9uScNolnDWZYXcHT)
+https://youtu.be/9u5Y_kR71FQ?si=IEofcTExXlIfL66h
 
 ---
 
 # Features
 
-## Sensor Registration
+## Sensor Registration and Telemetry
 
-Smart-X allows operators to register simulated IoT devices using:
+Smart-X supports three device categories:
 
-* Device MAC address
-* Deployment location
-* Sensor category
+- **Environmental:** floating-point readings, such as soil moisture.
+- **Power Consumption:** integer readings, such as electrical wattage.
+- **Actuator:** boolean readings, such as valve states.
 
-Supported sensor categories include:
-
-* **Environmental** — floating-point telemetry such as temperature or soil moisture
-* **Power Consumption** — integer telemetry such as electrical wattage
-* **Actuator** — boolean telemetry such as valve or device states
-
-Registered devices are maintained by the gateway and displayed through the WPF dashboard.
-
----
-
-## Multi-Typed Telemetry Ingestion
-
-The gateway supports strongly typed telemetry using generic telemetry packets:
-
-```text
-TelemetryPacket<float>
-TelemetryPacket<int>
-TelemetryPacket<bool>
-```
-
-Each telemetry type is processed through its corresponding API endpoint.
-
-| Sensor Category   | Telemetry Type | Example                    |
-| ----------------- | -------------- | -------------------------- |
-| Environmental     | `float`        | Soil moisture              |
-| Power Consumption | `int`          | Power consumption in watts |
-| Actuator          | `bool`         | Valve ON/OFF state         |
-
-This allows the system to preserve the original data type produced by each simulated IoT device rather than converting every reading into a common representation.
-
----
-
-## Telemetry Processing Pipeline
-
-Incoming telemetry passes through a processing pipeline that:
-
-1. Receives the telemetry packet.
-2. Validates the packet.
-3. Validates the deployment hierarchy recursively.
-4. Adds the reading to the appropriate processing buffer.
-5. Groups readings into batches.
-6. Stores completed batches in historical arrays.
-7. Moves processed values into bounded collections.
-8. Maintains a fixed maximum number of optimized records.
-
-The system uses separate processing paths for environmental, power, and actuator telemetry.
-
----
-
-# Data Structures and Programming Techniques
-
-Smart-X intentionally demonstrates several data structures and programming concepts.
-
-## Generic Collections
-
-A custom generic collection is used throughout the application:
-
-```text
-SmartCollection<T>
-```
-
-It is used for:
-
-* Sensor storage
-* Telemetry buffers
-* Optimized telemetry data
-
-The generic design allows the same collection implementation to work with different telemetry types without duplicating collection logic.
-
----
-
-## Arrays
-
-Telemetry history uses **jagged arrays**:
-
-```text
-float[][]
-int[][]
-bool[][]
-```
-
-These arrays maintain a bounded history of completed telemetry batches.
-
-For example:
-
-```csharp
-private readonly float[][] _historicalEnvironmentalBatches =
-    new float[MaxHistoricalBatches][];
-```
-
-The outer array represents available batch slots, while each inner array contains the telemetry readings belonging to one completed batch.
-
-The batch index wraps around when the maximum number of historical batches is reached, preventing the historical storage from growing indefinitely.
-
----
-
-## Recursion
-
-Deployment locations are converted into hierarchical deployment trees.
-
-For example:
-
-```text
-Facility A / Zone 1 / Sub-Zone B
-```
-
-becomes:
-
-```text
-Facility A
-└── Zone 1
-    └── Sub-Zone B
-```
-
-Each deployment location is represented using `DeploymentNode` objects containing child deployment nodes.
-
-The hierarchy is validated recursively.
-
-The validation method checks the current node and then calls itself for each child node:
-
-```csharp
-foreach (DeploymentNode child in node.Children)
-{
-    if (!ValidateDeploymentRecursively(
-            child,
-            depth + 1))
-    {
-        return false;
-    }
-}
-```
-
-A maximum depth is also enforced to prevent excessively deep or malformed deployment structures.
-
----
-
-## Generics
-
-The `TelemetryPacket<T>` class allows the same telemetry model to represent different sensor value types:
+Telemetry is represented using generic packets:
 
 ```csharp
 TelemetryPacket<float>
@@ -181,128 +28,82 @@ TelemetryPacket<int>
 TelemetryPacket<bool>
 ```
 
-The generic type parameter allows the telemetry value to retain its original type throughout the API and processing pipeline.
+The API validates incoming telemetry and processes each category through its corresponding pipeline.
 
-This is particularly appropriate for an IoT gateway because different sensor categories naturally produce different kinds of data.
+## Background Telemetry Processing
 
----
+The telemetry pipeline uses:
 
-## Method Overloading
+- Separate FIFO queues for environmental, power, and actuator telemetry.
+- A background service that checks for queued telemetry every 100 milliseconds.
+- Batch processing of five readings.
+- Bounded historical storage using jagged arrays and collections.
+- A `SortedDictionary` to maintain timestamp-ordered telemetry history.
 
-The telemetry ingestion service uses **method overloading** for its `IngestPacket` methods.
+These structures support the processing and organisation of simulated incoming device data.
 
-There are separate overloads for each supported telemetry type:
+## Real-Time Command Stream and History
 
-```csharp
-public void IngestPacket(TelemetryPacket<float> packet)
-```
+The command dashboard allows operators to select registered devices and issue commands according to their category.
 
-```csharp
-public void IngestPacket(TelemetryPacket<int> packet)
-```
+Supported commands include:
 
-```csharp
-public void IngestPacket(TelemetryPacket<bool> packet)
-```
+| Device category | Commands |
+|---|---|
+| Actuator | `ON`, `OFF` |
+| Environmental | `READ`, `CALIBRATE`, `RESET` |
+| Power Consumption | `READ`, `RESET`, `START_MONITORING`, `STOP_MONITORING` |
 
-Each method has the same method name but accepts a different parameter type.
+The command system includes simulated device states, command history, and undo functionality for reversible commands.
 
-This allows the API to use the same `IngestPacket(...)` operation while processing each telemetry type through its appropriate strongly typed path.
+The dashboard also provides:
 
----
+- Device search and category filtering.
+- Filtering by devices with active alerts.
+- Command history and command filtering.
+- Environmental telemetry history.
+- Active alert monitoring.
+- Search history.
+- Predictive recommendations.
+- Manual refresh and command controls.
 
-## Operator Overloading
+## Alert Prioritisation
 
-`TelemetryPacket<T>` also implements an overloaded `+` operator for supported numerical telemetry types.
+Environmental readings are checked against configured thresholds:
 
-For example:
+- **Critical:** below 10.
+- **High:** below 15.
+- **Warning:** below 20.
 
-```text
-TelemetryPacket<float> + TelemetryPacket<float>
-```
+The alert service uses a `PriorityQueue` to prioritise alerts by severity and a `HashSet` to track devices with active errors without duplicating their MAC addresses.
 
-produces an aggregated telemetry packet.
+When a reading returns to a safe range, the corresponding active error is cleared.
 
-The same mechanism supports integer telemetry while rejecting unsupported operations such as boolean aggregation.
+## Predictive Recommendation Engine
 
-Operator overloading is used specifically for the telemetry aggregation/developer testing functionality.
+The recommendation service analyses environmental readings and recent command activity to identify patterns that may require operator attention.
 
----
+It supports:
 
-# WPF Dashboard
+- Detection of unsafe environmental readings.
+- Detection of declining readings across consecutive samples.
+- Detection of repeated actuator `ON` or `OFF` commands while environmental readings are low.
+- Severity-based recommendations and suggested actions.
+- Repeated-search detection within a 30-minute window.
 
-The WPF application acts as the **Smart-X operator control centre**.
+Recommendations are displayed in the command dashboard alongside alerts and historical information.
 
-The dashboard provides:
+## Device Search History
 
-* Gateway connection status
-* Registered device count
-* Telemetry packet count
-* Sensor registration
-* Registered sensor selection
-* Telemetry submission
-* Mock telemetry generation
-* Device artifact attachment
-* Live telemetry monitoring
-* Anomaly feedback
-* Telemetry history retrieval
-* Telemetry aggregation testing
-* Live telemetry graphing
+The search history service records device-related searches and checks for repeated searches within a 30-minute period.
 
-The dashboard separates device configuration and management from live telemetry monitoring.
+When a search reaches the configured repetition threshold, the pattern can be passed to the recommendation engine.
 
----
+Search history is bounded to limit memory usage.
 
-## Live Telemetry Graph
+## Device Artifacts and Encryption
 
-The dashboard includes a custom telemetry trend visualisation that displays incoming readings over time.
-
-The chart maintains a bounded history of recent readings and supports the different telemetry categories.
-
-Actuator states are represented numerically when displayed on the graph so that their state changes can be visualised over time.
-
----
-
-# Mock IoT Telemetry
-
-Because the Smart-X environment is simulated, the application includes mock telemetry generation to represent data being produced by distributed IoT devices.
-
-The mock telemetry system supports:
-
-* Environmental readings
-* Power consumption readings
-* Actuator states
-* Multiple telemetry packets
-* Repeated ingestion through the normal API pipeline
-
-This allows the application to demonstrate how the gateway behaves under a continuous stream of simulated sensor data.
-
-The WPF dashboard also provides a **Seed Mock Telemetry** action for manually generating additional telemetry during demonstrations and load testing.
-
----
-
-# Validation
-
-Smart-X performs validation at the API boundary before telemetry enters the processing pipeline.
-
-Examples include:
-
-* Missing device identifiers
-* Missing deployment locations
-* Invalid environmental values
-* Environmental values outside the permitted range
-* Power values outside the permitted range
-* Invalid deployment hierarchies
-* Invalid sensor categories
-* Duplicate sensor MAC addresses
-
-This ensures that invalid telemetry is rejected before entering the gateway's processing structures.
-
----
-
-# Device Artifacts
-
-Registered devices can have supporting artifacts attached through the dashboard.
+Registered devices can have supporting artifacts attached to them.
 
 Supported file types include:
 
@@ -314,74 +115,112 @@ Supported file types include:
 .jpg
 ```
 
-Attachments are associated with a specific registered device using its MAC address.
+Attachments are associated with a registered device using its MAC address and encrypted using AES-GCM before storage.
 
-The upload flow is:
+The encryption implementation uses a 256-bit key, random nonces, authentication tags, and configuration-based key storage.
 
-```text
-Select registered sensor
-        ↓
-Choose artifact
-        ↓
-WPF uploads artifact
-        ↓
-API identifies sensor by MAC address
-        ↓
-Artifact is encrypted
-        ↓
-Encrypted file is stored
-        ↓
-Attachment metadata is associated with sensor
-```
+---
 
-Attachments are encrypted using **AES-GCM** before being written to disk.
+# Data Structures and Programming Techniques
 
-The encryption implementation uses:
+Smart-X demonstrates the use of several data structures and programming concepts.
 
-* 256-bit encryption keys
-* Random nonces
-* Authentication tags
-* Configuration-based key storage
+## Generic Collections
+
+`SmartCollection<T>` provides reusable collection functionality for supported sensor and telemetry data.
+
+## Queues
+
+`Queue<T>` implements FIFO processing for environmental, power, and actuator telemetry.
+
+## Priority Queues
+
+`PriorityQueue<TElement, TPriority>` organises alerts by severity so that critical alerts can be prioritised over lower-severity alerts.
+
+## Stacks
+
+`Stack<T>` stores previous simulated device states, allowing the most recent reversible command to be undone.
+
+## Dictionaries and Hash Sets
+
+- `Dictionary<TKey, TValue>` supports efficient device lookup by MAC address and tracking of simulated device states.
+- `SortedDictionary<TKey, TValue>` stores timestamped telemetry in sorted key order.
+- `HashSet<T>` tracks active device errors without duplicate MAC addresses.
+
+## Arrays and Bounded Storage
+
+Jagged arrays store completed telemetry batches. Ring-style batch indexing and storage limits prevent historical buffers from growing indefinitely.
+
+## Generics and Method Overloading
+
+`TelemetryPacket<T>` supports different telemetry value types through a shared model. Overloaded `IngestPacket` methods handle the supported types through appropriately typed processing paths.
+
+## Operator Overloading
+
+The telemetry packet model provides an overloaded `+` operator for supported numerical telemetry aggregation.
+
+## Recursion
+
+Deployment hierarchies are represented as trees of `DeploymentNode` objects. Recursive validation checks the hierarchy and enforces a maximum depth.
+
+---
+
+# WPF Dashboard
+
+The WPF application provides the operator interface for Smart-X.
+
+The main menu provides access to:
+
+1. **Sensor Data Ingestion and Telemetry** — device management and telemetry monitoring.
+2. **Real-Time Command Stream and History** — device commands, command history, alerts, and recommendations.
+3. **Network Topology and Mesh Routing** — displayed as coming soon.
+
+The telemetry dashboard provides sensor registration, telemetry submission, mock data generation, telemetry history, graphing, anomaly feedback, aggregation testing, and device artifact management.
+
+The command dashboard provides device controls, category-specific commands, filtering, history, alerts, search history, and predictive recommendations.
 
 ---
 
 # Architecture
 
-Smart-X uses a two-application architecture consisting of a WPF operator client and an ASP.NET Core backend API.
+Smart-X uses a WPF client connected to an ASP.NET Core Web API over HTTP and JSON.
 
 ```text
-┌───────────────────────────────┐
-│       WPF Operator UI         │
-│                               │
-│  Sensor Dashboard             │
-│  Telemetry Monitoring         │
-│  Device Management            │
-└───────────────┬───────────────┘
-                │
-                │ HTTP / JSON
-                ▼
-┌───────────────────────────────┐
-│       ASP.NET Core API        │
-│                               │
-│  Sensor Registration          │
-│  Telemetry Validation         │
-│  Telemetry Ingestion          │
-│  Deployment Validation        │
-│  Attachment Encryption        │
-└───────────────┬───────────────┘
-                │
-                ▼
-┌───────────────────────────────┐
-│      In-Memory Data Layer     │
-│                               │
-│  SmartCollection<T>            │
-│  Jagged Arrays                │
-│  Batched Telemetry            │
-│  Sensor Profiles              │
-└───────────────────────────────┘
+┌──────────────────────────────────┐
+│            WPF Client            │
+│                                  │
+│  Main Menu                       │
+│  Sensor and Telemetry Dashboard  │
+│  Command Stream and History      │
+└────────────────┬─────────────────┘
+                 │
+              HTTP / JSON
+                 │
+┌────────────────▼─────────────────┐
+│         ASP.NET Core API          │
+│                                  │
+│  Sensor Registration             │
+│  Telemetry Ingestion             │
+│  Background Queue Processing     │
+│  Alert Management                │
+│  Command Execution and Undo      │
+│  Search History                  │
+│  Predictive Recommendations      │
+│  Attachment Encryption           │
+└────────────────┬─────────────────┘
+                 │
+┌────────────────▼─────────────────┐
+│        In-Memory Data Layer       │
+│                                  │
+│  Dictionaries and Hash Sets      │
+│  FIFO Queues and Priority Queue  │
+│  Command Undo Stack              │
+│  Sorted Telemetry History        │
+│  Bounded Collections and Arrays  │
+└──────────────────────────────────┘
 ```
 
-The WPF application communicates with the ASP.NET Core API using HTTP requests and JSON serialization.
+Device telemetry and command execution are simulated. Network topology and mesh routing are not yet implemented.
 
 ---
 
@@ -389,7 +228,6 @@ The WPF application communicates with the ASP.NET Core API using HTTP requests a
 
 ```text
 SmartX
-│
 ├── SmartX.Shared
 │   ├── Collections
 │   │   └── SmartCollection.cs
@@ -403,190 +241,58 @@ SmartX
 ├── SmartXAPI
 │   ├── Services
 │   │   ├── AttachmentEncryptionService.cs
+│   │   ├── CommandService.cs
+│   │   ├── CriticalAlertService.cs
 │   │   ├── DeploymentValidationService.cs
+│   │   ├── PredictiveRecommendationService.cs
+│   │   ├── SearchHistoryService.cs
 │   │   ├── SensorService.cs
-│   │   └── TelemetryIngestionService.cs
-│   ├── Program.cs
-│   └── appsettings.json
+│   │   ├── TelemetryIngestionService.cs
+│   │   └── TelemetryQueueProcessor.cs
+│   └── Program.cs
 │
 └── SmartXWPF
-    ├── Dashboard
-    │   ├── DashboardController.cs
-    │   ├── DashboardState.cs
-    │   ├── DashboardView.cs
-    │   └── TelemetryChartService.cs
-    ├── Services
-    │   ├── AnomalyDetector.cs
-    │   ├── ApiService.cs
-    │   ├── AttachmentService.cs
-    │   ├── MockTelemetryService.cs
-    │   ├── SensorApiService.cs
-    │   └── TelemetryApiService.cs
     ├── MainWindow.xaml
-    └── SensorDashboardWindow.xaml
+    ├── MainWindow.xaml.cs
+    ├── SensorDashboardWindow.xaml
+    ├── CommandDashboardWindow.xaml
+    ├── CommandDashboardWindow.xaml.cs
+    └── Services
+        └── API and dashboard services
 ```
-
-> **Note:** Local configuration files containing encryption keys or other secrets should not be committed to the repository. The files shown above represent the application structure rather than files that necessarily contain deployment-specific secrets.
-
----
-
-# Application Flow
-
-## 1. Start Smart-X
-
-The application starts from the Smart-X architecture screen.
-
-The current implementation exposes the first development pillar:
-
-**Sensor Data Ingestion and Telemetry**
-
-Future architecture areas are presented as planned functionality:
-
-* Real-Time Command Stream and History
-* Network Topology and Mesh Routing
-
----
-
-## 2. Register a Sensor
-
-The operator provides:
-
-```text
-MAC Address
-Deployment Location
-Sensor Category
-```
-
-The WPF application sends the registration request to the API.
-
-The API validates and registers the sensor.
-
----
-
-## 3. Select a Sensor
-
-The operator selects a registered sensor from the dashboard.
-
-The selected device becomes the target for telemetry submission and device artifact attachment.
-
----
-
-## 4. Submit Telemetry
-
-The operator can simulate a reading from the selected device.
-
-The appropriate strongly typed telemetry packet is created based on the device category and submitted to the API.
-
----
-
-## 5. Monitor the Gateway
-
-Successful telemetry ingestion updates:
-
-* Current reading
-* Last update time
-* Packet count
-* Telemetry graph
-* Anomaly feedback
-* Telemetry activity feed
-
----
-
-## 6. Seed Mock Data
-
-The operator can generate additional telemetry to demonstrate the gateway's processing pipeline and data structures under load.
-
----
-
-## 7. Attach Device Artifacts
-
-A configuration file, log, or image can be attached to the currently selected sensor.
-
-The API associates the artifact with that device's MAC address and encrypts the file before storage.
 
 ---
 
 # Setup and Installation
 
-This section describes how to restore dependencies, compile the solution, configure attachment encryption, start the backend API, and launch the WPF client.
-
 ## Requirements
 
-* Windows
-* Visual Studio with WPF desktop development support
-* .NET 10 SDK
-* PowerShell
-* Git
+- Windows
+- .NET 10 SDK
+- Visual Studio with WPF development support
+- Git
 
----
+## 1. Clone the Repository
 
-## 1. Clone and Open the Solution
-
-Clone the repository and open the `SmartX.sln` solution in Visual Studio.
-
-The solution contains:
-
-```text
-SmartX.Shared
-```
-
-Shared models, enums, and custom collections.
-
-```text
-SmartXAPI
-```
-
-ASP.NET Core backend gateway.
-
-```text
-SmartXWPF
-```
-
-WPF operator client.
-
----
+Clone the repository and open the solution in Visual Studio.
 
 ## 2. Restore Dependencies
 
-From the solution directory, run:
+From the solution directory:
 
 ```powershell
 dotnet restore
 ```
 
-This restores the NuGet dependencies required by the solution.
-
----
-
-## 3. Compile the Project
-
-Build the complete solution with:
+## 3. Build the Solution
 
 ```powershell
 dotnet build
 ```
 
-The build should complete successfully before the API or WPF client is launched.
+## 4. Configure Attachment Encryption
 
----
-
-## 4. Configure the Attachment Encryption Key
-
-Smart-X encrypts uploaded device artifacts using AES-GCM.
-
-The API requires a **256-bit (32-byte) encryption key in Base64 format**.
-
-### Create `appsettings.json`
-
-Because `appsettings.json` contains configuration that may include sensitive information, it is excluded from source control.
-
-After cloning the repository, create a new file named:
-
-```text
-SmartXAPI/appsettings.json
-```
-
-Add the following structure:
+Create `SmartXAPI/appsettings.json` locally if it is required by the application configuration.
 
 ```json
 {
@@ -594,311 +300,99 @@ Add the following structure:
 }
 ```
 
-### Generate the Encryption Key
-
-Generate a secure 32-byte key with PowerShell:
+Generate a 32-byte encryption key using PowerShell:
 
 ```powershell
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-
 $bytes = New-Object byte[] 32
-
 $rng.GetBytes($bytes)
-
 $rng.Dispose()
-
 [Convert]::ToBase64String($bytes)
 ```
 
-Copy the resulting Base64 string and replace:
+Replace the placeholder with the generated Base64 value. The decoded key must be exactly 32 bytes.
 
-```text
-YOUR_GENERATED_BASE64_KEY
-```
+Do not commit real encryption keys or other secrets to source control.
 
-with the generated value.
-
-For example:
-
-```json
-{
-  "AttachmentEncryptionKey": "GENERATED_KEY_GOES_HERE"
-}
-```
-
-The generated key must decode to exactly **32 bytes (256 bits)**.
-
-**Security note:** Do not commit or publish your `appsettings.json` file if it contains a real encryption key. The file is intentionally excluded from source control, so each developer should create their own local configuration file and generate their own encryption key.
-
-If the encryption key is missing, malformed, or is not exactly 32 bytes after Base64 decoding, the API will refuse to start because encrypted attachment storage cannot be initialized safely.
-
-
----
-
-## 5. Start the Backend API
-
-Start `SmartXAPI` before launching the WPF client.
-
-From the solution directory:
+## 5. Start the API
 
 ```powershell
 dotnet run --project SmartXAPI
 ```
 
-Alternatively, set `SmartXAPI` as the startup project in Visual Studio and run it.
+Keep the API running while using the desktop application.
 
-Keep the API running while using the WPF client.
+## 6. Configure the WPF Client
 
----
-
-## 6. Configure the WPF API Address
-
-The WPF client reads its API base URL from application configuration.
-
-Make sure `ApiBaseUrl` points to the address where `SmartXAPI` is running before launching the client.
-
-The API and WPF client must be running against the same configured endpoint.
-
----
+Ensure the configured `ApiBaseUrl` matches the address at which the API is listening.
 
 ## 7. Run the WPF Client
 
-With the backend API running, start `SmartXWPF` from Visual Studio.
-
-The application opens on the Smart-X architecture screen.
-
-Select:
-
-```text
-Sensor Data Ingestion and Telemetry
-```
-
-to enter the main operator dashboard.
+Start `SmartXWPF` from Visual Studio and select the desired dashboard from the main menu.
 
 ---
 
-## 8. Verify the Installation
-
-A successful startup should allow you to:
-
-* Open the Smart-X WPF interface.
-* Confirm the gateway reports as connected.
-* Register a sensor.
-* Select the registered sensor.
-* Submit telemetry.
-* Observe the current reading.
-* Observe the live graph update.
-* Seed mock telemetry.
-* Attach a supported artifact.
-* Observe anomaly feedback.
-* Observe telemetry activity.
-
----
-
-# Troubleshooting
-
-## The WPF client reports that the gateway is offline
-
-Confirm that:
-
-1. `SmartXAPI` is running.
-2. `ApiBaseUrl` matches the API's actual listening address.
-3. The API is reachable from the machine running the WPF application.
-
-Restart the API and then restart the WPF client if necessary.
-
----
-
-## The API fails to start because of encryption configuration
-
-Confirm that:
-
-* `AttachmentEncryptionKey` exists.
-* The key is valid Base64.
-* The decoded key is exactly 32 bytes.
-* The local configuration being used by the API contains the key.
-
-Generate a new key using the PowerShell command provided in the setup section if necessary.
-
----
-
-## The project does not compile
-
-Run:
-
-```powershell
-dotnet restore
-dotnet clean
-dotnet build
-```
-
-Then check the Visual Studio Error List for the first compilation error.
-
----
-
-# Demonstration
+# Demonstration Workflow
 
 A typical demonstration can follow this sequence:
 
-```text
-1. Start Smart-X API
-2. Launch WPF application
-3. Confirm gateway connection
-4. Register a sensor
-5. Select the sensor
-6. Submit environmental telemetry
-7. Submit power telemetry
-8. Submit actuator telemetry
-9. Observe the live telemetry graph
-10. Trigger anomaly conditions
-11. Seed mock telemetry
-12. Retrieve telemetry history
-13. Attach a device artifact
-14. Demonstrate encrypted artifact storage
-15. Demonstrate telemetry aggregation
-```
+1. Launch the API and WPF client.
+2. Open the telemetry dashboard.
+3. Register or select a simulated device.
+4. Submit environmental, power, and actuator telemetry.
+5. Generate mock telemetry and review the telemetry history.
+6. Open the command dashboard.
+7. Issue category-specific device commands.
+8. Demonstrate undo functionality.
+9. Review command history and active alerts.
+10. Trigger environmental thresholds and review recommendations.
+11. Demonstrate device filtering and search history.
+12. Upload a device artifact and demonstrate encrypted storage.
 
 ---
 
 # Project Status
 
-## Currently Implemented
+## Implemented
 
-* Sensor registration
-* Multi-typed telemetry ingestion
-* Environmental telemetry
-* Power telemetry
-* Actuator telemetry
-* API validation
-* Deployment hierarchy validation
-* Recursive validation
-* Generic telemetry packets
-* Generic collections
-* Method overloading
-* Operator overloading
-* Jagged-array telemetry history
-* Batched telemetry processing
-* Mock telemetry generation
-* Live telemetry dashboard
-* Telemetry graph
-* Anomaly feedback
-* Device artifact uploads
-* AES-GCM attachment encryption
-* Startup data seeding
-* Telemetry aggregation
+- Sensor registration and category-specific telemetry.
+- Telemetry validation and deployment hierarchy validation.
+- Background queue processing and batched telemetry storage.
+- Generic collections, telemetry packets, and numerical aggregation.
+- Mock telemetry generation and telemetry history.
+- WPF telemetry dashboard and live graphing.
+- Command execution and simulated device states.
+- Command history and undo functionality.
+- Priority-based alerts and active-error tracking.
+- Device filtering and search history.
+- Predictive recommendations.
+- Device artifact uploads and AES-GCM encryption.
 
----
+## Planned
 
-## Startup Data Seeding
-
-The Smart-X gateway supports startup seeding of simulated devices and telemetry so that the application can demonstrate an already-populated IoT environment when it boots.
-
-The WPF **Seed Mock Telemetry** action remains available for manually generating additional telemetry during demonstrations and load testing.
-
----
-
-## Planned Architecture Areas
-
-The application architecture also provides space for future functionality:
-
-* Real-time command streaming
-* Extended telemetry history
-* Network topology management
-* Mesh routing visualisation
-
-These areas are represented in the Smart-X startup architecture but are not part of the currently implemented telemetry pillar.
-
----
-
-# Smart-X Concept
-
-Smart-X represents a simulated central gateway for a distributed IoT environment.
-
-```text
-             ┌──────────────────┐
-             │  Environmental   │
-             │     Sensors      │
-             └────────┬─────────┘
-                      │
-               ┌──────▼───────┐
-               │              │
-               │   Smart-X    │
-               │   Gateway    │
-               │              │
-               └──────┬───────┘
-                      │
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-      Hydroponic  Real Estate  Smart Grid
-        Farms      Utilities   Installations
-```
-
-The system demonstrates how a central gateway can receive, validate, process, optimise, and visualise heterogeneous telemetry originating from distributed IoT devices.
+- Network topology visualisation.
+- Mesh routing management.
 
 ---
 
 # Technology Stack
 
-| Component       | Technology                                |
-| --------------- | ----------------------------------------- |
-| Frontend        | WPF                                       |
-| Backend         | ASP.NET Core Web API                      |
-| Language        | C#                                        |
-| Runtime         | .NET 10                                   |
-| Communication   | HTTP / JSON                               |
-| Serialization   | `System.Text.Json`                        |
-| Encryption      | AES-GCM                                   |
-| Data Structures | Generic Collections, Lists, Jagged Arrays |
-| Processing      | Batched in-memory telemetry pipeline      |
-
----
-
-# Design Goals
-
-Smart-X was designed around several core IoT gateway principles.
-
-## Strongly Typed Telemetry
-
-Different IoT devices produce different types of data. Smart-X preserves those types throughout the telemetry pipeline.
-
-## Bounded Memory Usage
-
-Telemetry storage is deliberately bounded to prevent the simulated continuous stream from growing indefinitely.
-
-## Gateway Validation
-
-The API validates telemetry and deployment information before processing it.
-
-## Efficient Data Processing
-
-Telemetry is buffered and processed in batches before being moved into optimized storage structures.
-
-## Operator Visibility
-
-The WPF dashboard provides immediate visual feedback about the state of the simulated IoT ecosystem.
-
-## Secure Artifact Storage
-
-Device artifacts are encrypted before being persisted to disk.
+| Component | Technology |
+|---|---|
+| Language | C# |
+| Runtime | .NET 10 |
+| Frontend | WPF |
+| Backend | ASP.NET Core Web API |
+| Communication | HTTP / JSON |
+| Serialization | `System.Text.Json` |
+| Encryption | AES-GCM |
+| Processing | Background telemetry queues and batching |
+| Data structures | Queues, priority queues, stacks, dictionaries, hash sets, sorted dictionaries, arrays, and generic collections |
 
 ---
 
 # Academic Context
 
-Smart-X was developed as an IoT-focused software engineering project to demonstrate practical application of:
+Smart-X demonstrates practical applications of object-oriented programming, generic programming, data structures, recursive algorithms, client-server architecture, API validation, background processing, telemetry analysis, predictive recommendations, and secure file handling.
 
-* Object-oriented programming
-* Generic programming
-* Method overloading
-* Operator overloading
-* Recursive algorithms
-* Arrays and collections
-* API architecture
-* Client-server communication
-* Data validation
-* Telemetry processing
-* Mock IoT data generation
-* Secure file handling
-* WPF interface design
-
-The project is intentionally designed as an **IoT gateway simulation rather than a generic CRUD application**, with its architecture and data structures centred around continuous, multi-typed telemetry processing.
+The project is designed as an **IoT gateway simulation**, with an emphasis on processing heterogeneous telemetry, managing simulated devices, and providing operators with actionable monitoring and command-management tools.
