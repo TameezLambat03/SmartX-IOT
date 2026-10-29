@@ -8,7 +8,7 @@ using System.Windows.Controls;
 
 namespace SmartXWPF;
 
-public partial class SensorDashboardWindow : Window
+public partial class SensorDashboardWindow : UserControl
 {
     private readonly DashboardController _controller;
 
@@ -135,13 +135,5 @@ public partial class SensorDashboardWindow : Window
         RoutedEventArgs e)
     {
         _controller.ShowGraph(SensorCategory.Actuator);
-    }
-    private void BtnMainMenu_Click(
-       object sender,
-       RoutedEventArgs e)
-    {
-        MainWindow mainWindow = new MainWindow();
-        mainWindow.Show();
-        Close();
     }
 }

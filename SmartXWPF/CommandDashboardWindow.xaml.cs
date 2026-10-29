@@ -14,7 +14,7 @@ using System.Windows.Threading;
 
 namespace SmartXWPF;
 
-public partial class CommandDashboardWindow : Window
+public partial class CommandDashboardWindow : UserControl 
 {
     private readonly SensorApiService _sensorApiService;
     private readonly CommandApiService _commandApiService;
@@ -61,7 +61,7 @@ public partial class CommandDashboardWindow : Window
         _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
         Loaded += CommandDashboardWindow_Loaded;
-        Closed += (_, _) => _searchDebounceTimer.Stop();
+        
     }
 
     private async void CommandDashboardWindow_Loaded(
@@ -740,11 +740,5 @@ public partial class CommandDashboardWindow : Window
     }
 
 
-    private void BtnMainMenu_Click(
-        object sender, RoutedEventArgs e)
-    {
-        MainWindow mainWindow = new MainWindow();
-        mainWindow.Show();
-        Close();
-    }
+   
 }

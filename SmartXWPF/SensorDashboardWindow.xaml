@@ -1,15 +1,9 @@
-﻿<Window x:Class="SmartXWPF.SensorDashboardWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Smart-X | Telemetry Gateway"
-        Height="720"
-        Width="1100"
-        MinHeight="650"
-        MinWidth="950"
-        Background="#101418"
-        WindowStartupLocation="CenterScreen">
+﻿<UserControl x:Class="SmartXWPF.SensorDashboardWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#101418">
 
-    <Window.Resources>
+    <UserControl.Resources>
 
         <SolidColorBrush x:Key="BackgroundBrush" Color="#101418"/>
         <SolidColorBrush x:Key="PanelBrush" Color="#171D22"/>
@@ -65,7 +59,7 @@
             <Setter Property="Margin" Value="0,8,0,5"/>
         </Style>
 
-    </Window.Resources>
+    </UserControl.Resources>
 
     <Grid Margin="24">
 
@@ -92,18 +86,6 @@
                 Orientation="Horizontal"
                 VerticalAlignment="Center">
 
-                <Button x:Name="BtnMainMenu"
-                Content="← MAIN MENU"
-                Height="38"
-                Padding="12,0"
-                Margin="0,0,18,0"
-                Background="#202930"
-                Foreground="#DCE4E8"
-                BorderBrush="#34414A"
-                BorderThickness="1"
-                FontSize="12"
-                FontWeight="Bold"
-                Click="BtnMainMenu_Click"/>
 
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="SMART-X"
@@ -782,4 +764,4 @@
 
     </Grid>
 
-</Window>
+</UserControl>

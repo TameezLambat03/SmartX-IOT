@@ -1,44 +1,41 @@
-﻿using System.Text;
+﻿
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace SmartXWPF
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly SensorDashboardWindow _telemetryView;
+        private readonly CommandDashboardWindow _commandView;
+
         public MainWindow()
         {
             InitializeComponent();
+
+            _telemetryView = new SensorDashboardWindow();
+            _commandView = new CommandDashboardWindow();
+
+            ShowTelemetryView();
         }
+
+        private void ShowTelemetryView()
+        {
+            MainContent.Content = _telemetryView;
+        }
+
+        private void ShowCommandView()
+        {
+            MainContent.Content = _commandView;
+        }
+
         private void BtnIngestion_Click(object sender, RoutedEventArgs e)
         {
-            SensorDashboardWindow dashboard = new SensorDashboardWindow();
-            dashboard.Show();
-            this.Close();
+            ShowTelemetryView();
         }
-        //command dashboard
+
         private void BtnCommandDashboard_Click(object sender, RoutedEventArgs e)
         {
-            CommandDashboardWindow dashboard = new CommandDashboardWindow();
-
-
-            dashboard.Show();
-            this.Close();
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-
+            ShowCommandView();
         }
     }
 }
