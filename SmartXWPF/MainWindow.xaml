@@ -99,9 +99,10 @@
                             Click="BtnCommandDashboard_Click"
                             Style="{StaticResource NavigationButtonStyle}"/>
 
-                    <Button Content="03   Network Topology"
-                            IsEnabled="False"
-                            Style="{StaticResource DisabledNavigationButtonStyle}"/>
+                    <Button x:Name="BtnNetworkTopology" 
+                        Content="03   Network Topology"
+                            Click="BtnNetworkTopology_Click"
+                            Style="{StaticResource NavigationButtonStyle}"/>
 
                     <Border Height="1"
                             Background="#2B363D"

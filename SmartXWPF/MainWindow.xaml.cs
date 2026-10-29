@@ -7,6 +7,7 @@ namespace SmartXWPF
     {
         private readonly SensorDashboardWindow _telemetryView;
         private readonly CommandDashboardWindow _commandView;
+        private readonly NetworkTopologyView _networkTopologyView;
 
         public MainWindow()
         {
@@ -14,6 +15,7 @@ namespace SmartXWPF
 
             _telemetryView = new SensorDashboardWindow();
             _commandView = new CommandDashboardWindow();
+            _networkTopologyView = new NetworkTopologyView();
 
             ShowTelemetryView();
         }
@@ -36,6 +38,12 @@ namespace SmartXWPF
         private void BtnCommandDashboard_Click(object sender, RoutedEventArgs e)
         {
             ShowCommandView();
+        }
+        private void BtnNetworkTopology_Click(
+    object sender,
+    RoutedEventArgs e)
+        {
+            MainContent.Content = _networkTopologyView;
         }
     }
 }
