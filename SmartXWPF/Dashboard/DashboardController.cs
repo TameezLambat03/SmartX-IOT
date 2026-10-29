@@ -52,25 +52,47 @@ public class DashboardController
         await LoadHistoricalTelemetryAsync();
     }
 
+
     public async Task RefreshSensorsAsync()
     {
         try
         {
-            var result =
-                await _sensorApi.GetSensorsAsync();
+            var result = await _sensorApi.GetSensorsAsync();
 
             if (!result.Success)
             {
                 _view.SetGatewayStatus(false);
-
                 _view.Log(
                     "[SYSTEM WARNING] Gateway returned an error while loading registered sensors.");
-
                 return;
             }
 
+            // Remember the selected device by its stable identifier.
+            string? selectedMac = _state.SelectedSensor?.DeviceMacAddress;
+
             _view.SetSensors(result.Sensors);
             _view.SetGatewayStatus(true);
+
+            // Restore the selection using the refreshed sensor instance.
+            if (!string.IsNullOrWhiteSpace(selectedMac))
+            {
+                SensorProfile? restoredSensor = result.Sensors
+                    .FirstOrDefault(sensor =>
+                        string.Equals(
+                            sensor.DeviceMacAddress,
+                            selectedMac,
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (restoredSensor != null)
+                {
+                    SelectSensor(restoredSensor);
+                }
+                else
+                {
+                    // The selected device no longer exists in the API.
+                    _state.SelectedSensor = null;
+                }
+            }
 
             _view.Log(
                 $"[SYSTEM] Gateway connection established. " +
@@ -79,11 +101,11 @@ public class DashboardController
         catch
         {
             _view.SetGatewayStatus(false);
-
             _view.Log(
                 "[SYSTEM WARNING] Could not connect to the Smart-X API.");
         }
     }
+
 
     public void SelectSensor(
         SensorProfile? sensor)

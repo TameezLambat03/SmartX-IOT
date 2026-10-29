@@ -11,6 +11,7 @@ namespace SmartXWPF;
 public partial class SensorDashboardWindow : UserControl
 {
     private readonly DashboardController _controller;
+    private bool _initialized;
 
     public SensorDashboardWindow()
     {
@@ -41,12 +42,16 @@ public partial class SensorDashboardWindow : UserControl
     }
 
     private async void SensorDashboardWindow_Loaded(
-        object sender,
-        RoutedEventArgs e)
+     object sender,
+     RoutedEventArgs e)
     {
+        if (_initialized)
+            return;
+
+        _initialized = true;
+
         await _controller.InitializeAsync();
     }
-
     private async void BtnRefreshSensors_Click(
         object sender,
         RoutedEventArgs e)

@@ -100,20 +100,20 @@ public class DashboardView
         ComboBox actuator =
             Combo("CmbActuatorState");
 
+        // Update the selected sensor's category and control visibility,
+        // but do not overwrite the user's current input.
         switch (sensor.Category)
         {
             case SensorCategory.Environmental:
                 category.SelectedIndex = 0;
                 value.Visibility = Visibility.Visible;
                 actuator.Visibility = Visibility.Collapsed;
-                value.Text = "45.5";
                 break;
 
             case SensorCategory.PowerConsumption:
                 category.SelectedIndex = 1;
                 value.Visibility = Visibility.Visible;
                 actuator.Visibility = Visibility.Collapsed;
-                value.Text = "742";
                 break;
 
             case SensorCategory.Actuator:
@@ -124,37 +124,23 @@ public class DashboardView
         }
     }
 
-    public void UpdateCategoryControls(
-        int selectedIndex)
+
+    public void UpdateCategoryControls(int selectedIndex)
     {
-        TextBox value =
-            Input("TxtSensorValue");
+        TextBox value = Input("TxtSensorValue");
+        ComboBox actuator = Combo("CmbActuatorState");
 
-        ComboBox actuator =
-            Combo("CmbActuatorState");
+        bool isActuator = selectedIndex == 2;
 
-        bool isActuator =
-            selectedIndex == 2;
+        value.Visibility = isActuator
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
-        value.Visibility =
-            isActuator
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-
-        actuator.Visibility =
-            isActuator
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-        if (selectedIndex == 0)
-        {
-            value.Text = "45.5";
-        }
-        else if (selectedIndex == 1)
-        {
-            value.Text = "742";
-        }
+        actuator.Visibility = isActuator
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
+
 
     public string GetMac() =>
         Input("TxtMacAddress").Text.Trim();
