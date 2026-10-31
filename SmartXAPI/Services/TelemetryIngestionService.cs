@@ -24,15 +24,14 @@ public class TelemetryIngestionService
     private readonly Queue<TelemetryPacket<bool>> _actuatorQueue = new();
 
     // Timestamp-ordered telemetry logs.
-    // Lists allow multiple packets to share the same timestamp.
-    private readonly SortedDictionary<DateTime, List<TelemetryPacket<float>>>
-        _environmentalLogs = new();
 
-    private readonly SortedDictionary<DateTime, List<TelemetryPacket<int>>>
-        _powerLogs = new();
+    private readonly  TelemetryAvlTree<float> _environmentalHistory = new();//storing in a object 
 
-    private readonly SortedDictionary<DateTime, List<TelemetryPacket<bool>>>
-        _actuatorLogs = new();
+    private readonly TelemetryAvlTree<int> _powerHistory = new();
+
+
+    private readonly TelemetryAvlTree<bool> _actuatorHistory = new();
+
 
     private readonly CriticalAlertService _criticalAlertService;
     private readonly PredictiveRecommendationService _recommendationService;
@@ -115,7 +114,7 @@ public class TelemetryIngestionService
                 TelemetryPacket<float> packet =
                     _environmentalQueue.Dequeue();
 
-                AddTimestampedLog(_environmentalLogs, packet);
+                _environmentalHistory.Insert(packet);//calling Insert method from TelemtryAvlTree
 
                 _criticalAlertService.CheckEnvironmentalReading(
                     packet.DeviceMacAddress,
@@ -147,7 +146,7 @@ public class TelemetryIngestionService
             {
                 TelemetryPacket<int> packet = _powerQueue.Dequeue();
 
-                AddTimestampedLog(_powerLogs, packet);
+                _powerHistory.Insert(packet);//calling Insert method from TelemtryAvlTree
 
                 _currentPowerBuffer.Add(packet.SensorValue);
 
@@ -167,7 +166,7 @@ public class TelemetryIngestionService
             {
                 TelemetryPacket<bool> packet = _actuatorQueue.Dequeue();
 
-                AddTimestampedLog(_actuatorLogs, packet);
+                _actuatorHistory.Insert(packet);//calling Insert method from TelemtryAvlTree
 
                 _currentActuatorBuffer.Add(packet.SensorValue);
 
@@ -269,37 +268,58 @@ public class TelemetryIngestionService
 
     // Return environmental packets in timestamp order.
     public IReadOnlyList<TelemetryPacket<float>>
-        GetEnvironmentalTimestampedLogs()
+        GetEnvironmentalHistory(
+        DateTime start,
+        DateTime end,
+        string? deviceMacAddress = null)//parameters to customise the search 
+
     {
         lock (_environmentalLock)
         {
-            return _environmentalLogs.Values
-                .SelectMany(packets => packets)
-                .ToList();
+            return _environmentalHistory.QueryRange(//method from TelemtryAvl class
+          start, // choose start 
+          end,  //choose end date
+          deviceMacAddress
+           
+            );
         }
     }
 
     // Return power packets in timestamp order.
     public IReadOnlyList<TelemetryPacket<int>>
-        GetPowerTimestampedLogs()
+        GetPowerHistory(
+        DateTime start,
+        DateTime end, 
+        string? deviveMacAddress = null)
+
     {
-        lock (_powerLock)
+        lock (_powerLock)// protects the tree while the background service inserts new packets
         {
-            return _powerLogs.Values
-                .SelectMany(packets => packets)
-                .ToList();
+            return _powerHistory.QueryRange(
+                start,
+                end,
+                deviveMacAddress
+                );
+                
         }
     }
 
     // Return actuator packets in timestamp order.
     public IReadOnlyList<TelemetryPacket<bool>>
-        GetActuatorTimestampedLogs()
+       GetActuatorHistory(
+        DateTime start,
+        DateTime end,
+        string? deviveMacAddress = null)
+
     {
-        lock (_actuatorLock)
+        lock (_actuatorLock)// protects the tree while the background service inserts new packets
         {
-            return _actuatorLogs.Values
-                .SelectMany(packets => packets)
-                .ToList();
+            return _actuatorHistory.QueryRange(
+                start,
+                end,
+                deviveMacAddress
+                );
+
         }
     }
 

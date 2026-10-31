@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SmartX.Shared.Networking
 {
-    internal class MeshNetWorkGraph
+    public class MeshNetWorkGraph
     {
         private readonly HashSet<string> _devices = new(StringComparer.OrdinalIgnoreCase);//collection of strings that does not allow dupelicates 
         //map each unqiue device to its neighbours using adjacency list
@@ -26,7 +26,7 @@ namespace SmartX.Shared.Networking
         {
             AddDevice(deviceA);
             AddDevice(deviceB);
-
+            //mapping each devie to its neighbour
             _adjacencyList[deviceA].Add(deviceB);
             _adjacencyList[deviceB].Add(deviceA);
         }

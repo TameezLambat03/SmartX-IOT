@@ -100,7 +100,7 @@ public class TelemetryAvlTree<T>
     public IReadOnlyList<TelemetryPacket<T>> QueryRange(//selects readings betwen two timestamps
         DateTime start,
         DateTime end,
-        string? deviceMacAddress = null)
+        string? deviceMacAddress = null)//MAC address is optional.  don't supply one and the query returns readings from all sensors.
     {
         if (start > end)
         {
