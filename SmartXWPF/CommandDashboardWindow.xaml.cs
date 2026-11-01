@@ -621,7 +621,9 @@ public partial class CommandDashboardWindow : UserControl
         try
         {
             List<TelemetryPacket<float>> history =
-                await _telemetryApiService.GetEnvironmentalHistoryAsync();
+     await _telemetryApiService.GetEnvironmentalHistoryAsync(
+         DateTime.MinValue,
+         DateTime.MaxValue);
 
             DgEnvironmentalHistory.ItemsSource = history
                 .OrderByDescending(packet => packet.Timestamp)

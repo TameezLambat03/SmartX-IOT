@@ -265,6 +265,44 @@ public class TelemetryIngestionService
             }
         }
     }
+    // Return all environmental packets in timestamp order.
+    public IReadOnlyList<TelemetryPacket<float>>
+        GetEnvironmentalTimestampedLogs()
+    {
+        lock (_environmentalLock)
+        {
+            return _environmentalHistory.QueryRange(
+                DateTime.MinValue,
+                DateTime.MaxValue
+            );
+        }
+    }
+
+    // Return all power packets in timestamp order.
+    public IReadOnlyList<TelemetryPacket<int>>
+        GetPowerTimestampedLogs()
+    {
+        lock (_powerLock)
+        {
+            return _powerHistory.QueryRange(
+                DateTime.MinValue,
+                DateTime.MaxValue
+            );
+        }
+    }
+
+    // Return all actuator packets in timestamp order.
+    public IReadOnlyList<TelemetryPacket<bool>>
+        GetActuatorTimestampedLogs()
+    {
+        lock (_actuatorLock)
+        {
+            return _actuatorHistory.QueryRange(
+                DateTime.MinValue,
+                DateTime.MaxValue
+            );
+        }
+    }
 
     // Return environmental packets in timestamp order.
     public IReadOnlyList<TelemetryPacket<float>>
@@ -290,7 +328,7 @@ public class TelemetryIngestionService
         GetPowerHistory(
         DateTime start,
         DateTime end, 
-        string? deviveMacAddress = null)
+        string? deviceMacAddress = null)
 
     {
         lock (_powerLock)// protects the tree while the background service inserts new packets
@@ -298,7 +336,7 @@ public class TelemetryIngestionService
             return _powerHistory.QueryRange(
                 start,
                 end,
-                deviveMacAddress
+                deviceMacAddress
                 );
                 
         }

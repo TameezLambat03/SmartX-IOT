@@ -352,28 +352,47 @@ app.MapGet(
 
 // TIMESTAMPED TELEMETRY HISTORY
 
-app.MapGet(
-    "/api/telemetry/environmental/history",
-    (TelemetryIngestionService ingestionService) =>
+app.MapGet(// registers an HTTP GET endpoint.
+    "/api/telemetry/environmental/history",//defines where endpoint is accessed 
+    (DateTime start,
+        DateTime end,
+        string? deviceMacAddress,
+        TelemetryIngestionService ingestionService) => //parameters are added
+
     {
         return Results.Ok(
-            ingestionService.GetEnvironmentalTimestampedLogs());
+            ingestionService.GetEnvironmentalHistory(
+                start,
+                end,
+                deviceMacAddress));
     });
 
 app.MapGet(
     "/api/telemetry/power/history",
-    (TelemetryIngestionService ingestionService) =>
+    (DateTime start,
+        DateTime end,
+        string? deviceMacAddress,
+        TelemetryIngestionService ingestionService) => //parameters are added
     {
         return Results.Ok(
-            ingestionService.GetPowerTimestampedLogs());
+            ingestionService.GetPowerHistory(
+                start,
+                end,
+                deviceMacAddress));
     });
 
 app.MapGet(
     "/api/telemetry/actuator/history",
-    (TelemetryIngestionService ingestionService) =>
-    {
+   (DateTime start,
+        DateTime end,
+        string? deviceMacAddress,
+        TelemetryIngestionService ingestionService) => //parameters are added
+   {
         return Results.Ok(
-            ingestionService.GetActuatorTimestampedLogs());
+            ingestionService.GetActuatorHistory(
+                start,
+                end,
+                deviceMacAddress));
     });
 
 

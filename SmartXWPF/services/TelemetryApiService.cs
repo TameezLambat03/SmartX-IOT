@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-
+using System;
 namespace SmartXWPF.Services;
+
 
 public class TelemetryApiService
 {
@@ -39,21 +40,71 @@ public class TelemetryApiService
             packet);
     }
 
-    public async Task<List<float>> GetEnvironmentalAsync()
-    {
-        List<float>? data =
-            await _client.GetFromJsonAsync<List<float>>(
-                "api/telemetry/environmental");
 
-        return data ?? new List<float>();
+    public async Task<List<TelemetryPacket<float>>>
+     GetEnvironmentalHistoryAsync(
+         DateTime start,
+         DateTime end,
+         string? deviceMacAddress = null)
+    {
+        string url =
+            $"api/telemetry/environmental/history" + //identifies the API endpoint.
+            $"?start={Uri.EscapeDataString(start.ToString("O"))}" +//param
+            $"&end={Uri.EscapeDataString(end.ToString("O"))}";//param
+
+        if (!string.IsNullOrWhiteSpace(deviceMacAddress))
+        {
+            url += $"&deviceMacAddress={Uri.EscapeDataString(deviceMacAddress)}";
+        }
+
+        List<TelemetryPacket<float>>? history =//creates list 
+    await _client.GetFromJsonAsync<
+        List<TelemetryPacket<float>>>(url);
+
+        return history ?? new List<TelemetryPacket<float>>();
     }
-    public async Task<List<int>> GetPowerAsync()
-    {
-        List<int>? data =
-            await _client.GetFromJsonAsync<List<int>>(
-                "api/telemetry/power");
 
-        return data ?? new List<int>();
+    public async Task<List<TelemetryPacket<bool>>> GetActuatorHistoryAsync(
+    DateTime start,
+    DateTime end,
+    string? deviceMacAddress = null)
+    {
+        string url =
+            $"api/telemetry/actuator/history" +
+            $"?start={Uri.EscapeDataString(start.ToString("O"))}" +
+            $"&end={Uri.EscapeDataString(end.ToString("O"))}";
+
+        if (!string.IsNullOrWhiteSpace(deviceMacAddress))
+        {
+            url += $"&deviceMacAddress={Uri.EscapeDataString(deviceMacAddress)}";
+        }
+
+        List<TelemetryPacket<bool>>? history =
+            await _client.GetFromJsonAsync<
+                List<TelemetryPacket<bool>>>(url);
+
+        return history ?? new List<TelemetryPacket<bool>>();
+    }
+    public async Task<List<TelemetryPacket<int>>> GetPowerHistoryAsync(
+    DateTime start,
+    DateTime end,
+    string? deviceMacAddress = null)
+    {
+        string url =
+            $"api/telemetry/power/history" +
+            $"?start={Uri.EscapeDataString(start.ToString("O"))}" +
+            $"&end={Uri.EscapeDataString(end.ToString("O"))}";
+
+        if (!string.IsNullOrWhiteSpace(deviceMacAddress))
+        {
+            url += $"&deviceMacAddress={Uri.EscapeDataString(deviceMacAddress)}";
+        }
+
+        List<TelemetryPacket<int>>? history =
+            await _client.GetFromJsonAsync<
+                List<TelemetryPacket<int>>>(url);
+
+        return history ?? new List<TelemetryPacket<int>>();
     }
 
     public async Task<List<bool>> GetActuatorAsync()
@@ -65,16 +116,21 @@ public class TelemetryApiService
         return data ?? new List<bool>();
     }
 
-
-
-public async Task<List<TelemetryPacket<float>>>
-    GetEnvironmentalHistoryAsync()
+    public async Task<List<float>> GetEnvironmentalAsync()
     {
-        List<TelemetryPacket<float>>? history =
-            await _client.GetFromJsonAsync<
-                List<TelemetryPacket<float>>>(
-                    "api/telemetry/environmental/history");
+        List<float>? data =
+            await _client.GetFromJsonAsync<List<float>>(
+                "api/telemetry/environmental");
 
-        return history ?? new List<TelemetryPacket<float>>();
+        return data ?? new List<float>();
+    }
+
+    public async Task<List<int>> GetPowerAsync()
+    {
+        List<int>? data =
+            await _client.GetFromJsonAsync<List<int>>(
+                "api/telemetry/power");
+
+        return data ?? new List<int>();
     }
 }
