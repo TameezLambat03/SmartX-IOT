@@ -238,6 +238,29 @@
                               BorderBrush="{StaticResource BorderBrush}"
                               HeadersVisibility="Column"
                               GridLinesVisibility="Horizontal">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="#161C20"/>
+                                <Setter Property="Foreground" Value="#F1F5F7"/>
+                                <Setter Property="BorderBrush" Value="#2B363D"/>
+                            </Style>
+                        </DataGrid.RowStyle>
+
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Background" Value="#161C20"/>
+                                <Setter Property="Foreground" Value="#F1F5F7"/>
+                                <Setter Property="BorderBrush" Value="#2B363D"/>
+                            </Style>
+                        </DataGrid.CellStyle>
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#20282D"/>
+                                <Setter Property="Foreground" Value="#20C997"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Padding" Value="8"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
 
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Timestamp"
