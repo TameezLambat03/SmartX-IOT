@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="SmartX.Shared/SmartX.Shared.csproj" />
+  <Project Path="SmartX.Tests/SmartX.Tests.csproj" Id="49cf7f59-84aa-4301-ab29-89586a4fecf4" />
   <Project Path="SmartXAPI/SmartXAPI.csproj" />
   <Project Path="SmartXWPF/SmartXWPF.csproj" />
 </Solution>

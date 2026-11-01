@@ -136,5 +136,75 @@ namespace SmartX.Shared.Networking
 
             return traversalOrder; // Return the order in which devices were visited.
         }
+        public List<(string DeviceA, string DeviceB, double Weight)> MinimumSpanningTree(
+    string startDevice)
+        {
+            // Validate the starting device.
+            if (string.IsNullOrWhiteSpace(startDevice))
+            {
+                throw new ArgumentException(
+                    "Starting device cannot be empty.",
+                    nameof(startDevice));
+            }
+
+            startDevice = startDevice.Trim();
+
+            if (!_adjacencyList.ContainsKey(startDevice))
+            {
+                throw new ArgumentException(
+                    "Starting device does not exist.",
+                    nameof(startDevice));
+            }
+
+            // Store the connections selected for the minimum spanning tree.
+            List<(string DeviceA, string DeviceB, double Weight)> tree = new();
+
+            // Track devices already included in the tree.
+            HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase);
+
+            // Store candidate connections: source, destination and weight.
+            PriorityQueue<(string From, string To, double Weight), double> candidates = new();
+
+            // Begin building the tree at the selected device.
+            visited.Add(startDevice);
+
+            // Add connections from the starting device to its neighbours.
+            foreach (var neighbour in _adjacencyList[startDevice])
+            {
+                candidates.Enqueue(
+                    (startDevice, neighbour.Key, neighbour.Value),
+                    neighbour.Value);
+            }
+
+            // Keep selecting the lowest-weight connection available.
+            while (candidates.Count > 0)
+            {
+                var edge = candidates.Dequeue();
+
+                // Skip connections leading to devices already in the tree.
+                if (visited.Contains(edge.To))
+                {
+                    continue;
+                }
+
+                // Include the new device and its connection in the tree.
+                visited.Add(edge.To);
+                tree.Add((edge.From, edge.To, edge.Weight));
+
+                // Add candidate connections from the newly included device.
+                foreach (var neighbour in _adjacencyList[edge.To])
+                {
+                    if (!visited.Contains(neighbour.Key))
+                    {
+                        candidates.Enqueue(
+                            (edge.To, neighbour.Key, neighbour.Value),
+                            neighbour.Value);
+                    }
+                }
+            }
+
+            // Return the minimum spanning tree for the starting device's component.
+            return tree;
+        }
     }
 }
