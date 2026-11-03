@@ -9,13 +9,16 @@ public class StartupSeeder
 
     private readonly SensorService _sensorService;
     private readonly TelemetryIngestionService _telemetryService;
-
+    // Provides the mesh network configuration during application startup.
+    private readonly MeshNetworkService _meshNetworkService;
     public StartupSeeder(
+
         SensorService sensorService,
         TelemetryIngestionService telemetryService)
     {
         _sensorService = sensorService;
         _telemetryService = telemetryService;
+        _meshNetworkService = new MeshNetworkService();
     }
 
     public void Seed()
@@ -37,7 +40,11 @@ public class StartupSeeder
             _sensorService.RegisterSensor(sensor);
 
             SeedTelemetry(sensor);
+          
         }
+        // Configure the mesh network after all demo sensors have been processed.
+        // The demoSensors collection also contains sensors that were already registered.
+        _meshNetworkService.ConfigureDemoNetwork(demoSensors);
     }
 
     private List<SensorProfile> CreateDemoSensors()

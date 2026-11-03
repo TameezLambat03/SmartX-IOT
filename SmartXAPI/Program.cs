@@ -23,6 +23,7 @@ builder.Services.AddSingleton<AttachmentEncryptionService>();
 builder.Services.AddSingleton<StartupSeeder>();
 builder.Services.AddSingleton<PredictiveRecommendationService>();
 builder.Services.AddSingleton<SearchHistoryService>();
+builder.Services.AddSingleton<MeshNetworkService>();
 var app = builder.Build();
 
 using (IServiceScope scope = app.Services.CreateScope())
@@ -518,7 +519,47 @@ app.MapGet(
         return Results.Ok(sensorService.GetAllSensors());
     });
 
+// Returns all mesh network nodes and their connections.
+app.MapGet("/api/network/topology",
+    (MeshNetworkService meshService) =>
+    {
+        return Results.Ok(meshService.GetTopology());
+    });
 
+// Returns the minimum spanning tree calculated using Prim's algorithm.
+app.MapGet("/api/network/mst",
+    (MeshNetworkService meshService) =>
+    {
+        return Results.Ok(meshService.GetMinimumSpanningTree());
+    });
+
+// Calculates the cheapest route between two network devices using Dijkstra's algorithm.
+app.MapGet("/api/network/route",
+    (string startDevice,
+     string destinationDevice,
+     MeshNetworkService meshService) =>
+    {
+        var result = meshService.FindShortestPath(
+            startDevice,
+            destinationDevice);
+
+        // Return a not-found response if no route exists.
+        if (result.Path.Count == 0)
+        {
+            return Results.NotFound(new
+            {
+                Message = "No route exists between the selected devices."
+            });
+        }
+
+        return Results.Ok(new
+        {
+            StartDevice = startDevice,
+            DestinationDevice = destinationDevice,
+            Path = result.Path,
+            TotalWeight = result.TotalWeight
+        });
+    });
 
 // COMMAND EXECUTION
 
