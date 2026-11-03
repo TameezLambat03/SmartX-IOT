@@ -8,6 +8,7 @@ using System.Configuration;
 using System.Threading.Tasks;
 using SmartX.Shared.Enums;
 using System.Linq;
+using SmartXWPF.DTOs;
 
 namespace SmartXWPF;
 
@@ -17,17 +18,24 @@ public partial class NetworkTopologyView : UserControl
 {
     private readonly SensorApiService _sensorApiService;
     private readonly TelemetryApiService _telemetryApiService;
-
+    private readonly MeshNetworkApiService _meshNetworkApiService;
+    private List<MeshNetworkNode> _networkNodes = new();
+    private readonly NetworkTopologyRenderer _topologyRenderer;
+    private List<MeshNetworkConnection> _networkConnections = new();
     public NetworkTopologyView()
     {
         InitializeComponent();
         string? apiBaseUrl =
     ConfigurationManager.AppSettings["ApiBaseUrl"];
-
+        //constructor initialisations 
         ApiService apiService = new ApiService(apiBaseUrl!);
-
         _sensorApiService = new SensorApiService(apiService);
         _telemetryApiService = new TelemetryApiService(apiService);
+        _meshNetworkApiService = new MeshNetworkApiService(apiService);
+        _sensorApiService = new SensorApiService(apiService);
+        _telemetryApiService = new TelemetryApiService(apiService);
+        _topologyRenderer = new NetworkTopologyRenderer();
+
         DpStartDate.SelectedDate = DateTime.Today;
         DpEndDate.SelectedDate = DateTime.Today;
 
@@ -41,6 +49,7 @@ public partial class NetworkTopologyView : UserControl
     RoutedEventArgs e)
     {
         await LoadSensorsAsync();
+        await LoadTopologyAsync();
     }
 
     //load sensors method 
@@ -193,6 +202,50 @@ public partial class NetworkTopologyView : UserControl
         finally
         {
             BtnQueryHistory.IsEnabled = true;
+        }
+
+    }
+    private async Task LoadTopologyAsync()
+    {
+        try
+        {
+            MeshNetworkTopology? topology =
+                await _meshNetworkApiService.GetTopologyAsync();
+
+            if (topology == null)
+            {
+                LblHistoryStatus.Text = "Could not retrieve network topology.";
+                return;
+            }
+
+            // Update the network summary.
+            LblTotalNodes.Text = topology.Nodes.Count.ToString();
+
+            // The current demo graph is connected, so every returned node
+            // should be reachable from the gateway.
+            LblReachableNodes.Text = topology.Nodes.Count.ToString();
+
+            LblOfflineNodes.Text = "0";
+
+            // We'll use these collections in the next step to draw the graph.
+            _networkNodes = topology.Nodes;
+            _networkConnections = topology.Connections;
+            // Render the retrieved network topology on the WPF canvas.
+            _topologyRenderer.Draw(
+                NetworkCanvas,
+                _networkNodes,
+                _networkConnections);
+            LblHistoryStatus.Text =
+                $"Network loaded: {topology.Nodes.Count} nodes and " +
+                $"{topology.Connections.Count} connections.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Could not load network topology: {ex.Message}",
+                "Smart-X",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 }

@@ -12,13 +12,13 @@ public class StartupSeeder
     // Provides the mesh network configuration during application startup.
     private readonly MeshNetworkService _meshNetworkService;
     public StartupSeeder(
-
-        SensorService sensorService,
-        TelemetryIngestionService telemetryService)
+    SensorService sensorService,
+    TelemetryIngestionService telemetryService,
+    MeshNetworkService meshNetworkService)
     {
         _sensorService = sensorService;
         _telemetryService = telemetryService;
-        _meshNetworkService = new MeshNetworkService();
+        _meshNetworkService = meshNetworkService;
     }
 
     public void Seed()
