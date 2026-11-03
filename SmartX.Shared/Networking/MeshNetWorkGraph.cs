@@ -136,7 +136,8 @@ namespace SmartX.Shared.Networking
 
             return traversalOrder; // Return the order in which devices were visited.
         }
-        public List<(string DeviceA, string DeviceB, double Weight)> MinimumSpanningTree(
+        //prims algorithm
+        public List<(string DeviceA, string DeviceB, double Weight)> MinimumSpanningTree(//cheapest combo of connections to connec tall devices
     string startDevice)
         {
             // Validate the starting device.
@@ -206,5 +207,105 @@ namespace SmartX.Shared.Networking
             // Return the minimum spanning tree for the starting device's component.
             return tree;
         }
+
+        //Dijkstra's algorithm
+        public (List<string> Path, double TotalWeight) FindShortestPath(//What is the cheapest route from this particular sensor to the gateway?
+            string startDevice,
+            string destinationDevice)
+        {
+            // Validate the starting device.
+            if (string.IsNullOrWhiteSpace(startDevice))
+                throw new ArgumentException("Starting device cannot be empty.");
+
+            // Validate the destination device.
+            if (string.IsNullOrWhiteSpace(destinationDevice))
+                throw new ArgumentException("Destination device cannot be empty.");
+
+            startDevice = startDevice.Trim();
+            destinationDevice = destinationDevice.Trim();
+
+            // Check that both devices exist in the graph.
+            if (!_adjacencyList.ContainsKey(startDevice))
+                throw new ArgumentException("Starting device does not exist.");
+
+            if (!_adjacencyList.ContainsKey(destinationDevice))
+                throw new ArgumentException("Destination device does not exist.");
+
+            // Store the cheapest known cost to reach each device.
+            Dictionary<string, double> distances =
+                new(StringComparer.OrdinalIgnoreCase);
+
+            // Store the previous device in each cheapest route.
+            Dictionary<string, string?> previous =
+                new(StringComparer.OrdinalIgnoreCase);
+
+            // Priority queue processes the device with the lowest known cost first.
+            PriorityQueue<string, double> queue = new();
+
+            // Initially, every device is considered unreachable.
+            foreach (string device in _adjacencyList.Keys)
+            {
+                distances[device] = double.PositiveInfinity;
+                previous[device] = null;
+            }
+
+            // The starting device has a cost of zero to reach itself.
+            distances[startDevice] = 0;
+
+            queue.Enqueue(startDevice, 0);
+
+            // Continue while there are devices waiting to be explored.
+            while (queue.Count > 0)
+            {
+                string currentDevice = queue.Dequeue();
+
+                // Stop if we have reached the destination.
+                if (currentDevice.Equals(
+                    destinationDevice,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                // Examine every neighbour of the current device.
+                foreach (var neighbour in _adjacencyList[currentDevice])
+                {
+                    double newDistance =
+                        distances[currentDevice] + neighbour.Value;
+
+                    // Check whether this route is cheaper than the known route.
+                    if (newDistance < distances[neighbour.Key])
+                    {
+                        distances[neighbour.Key] = newDistance;
+                        previous[neighbour.Key] = currentDevice;
+
+                        // Add the updated route to the priority queue.
+                        queue.Enqueue(neighbour.Key, newDistance);
+                    }
+                }
+            }
+
+            // Return an empty path if the destination cannot be reached.
+            if (double.IsPositiveInfinity(distances[destinationDevice]))
+            {
+                return (new List<string>(), double.PositiveInfinity);
+            }
+
+            // Reconstruct the route by following the previous-device references.
+            List<string> path = new();
+            string? current = destinationDevice;
+
+            while (current != null)
+            {
+                path.Add(current);
+                current = previous[current];
+            }
+
+            // Reverse the path so it runs from start to destination.
+            path.Reverse();
+
+            return (path, distances[destinationDevice]);
+        }
+
     }
 }

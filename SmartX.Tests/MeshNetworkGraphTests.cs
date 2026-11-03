@@ -97,5 +97,30 @@ namespace SmartX.Tests
             Assert.Equal(3, result.Count);
             Assert.Equal(10, totalWeight);
         }
+        //Dijkstra's test
+        [Fact]
+        public void FindShortestPath_ShouldReturnCheapestRoute()
+        {
+            // Arrange
+            MeshNetWorkGraph graph = CreateTestGraph();
+
+            // Act
+            var result = graph.FindShortestPath(
+                "Sensor B",
+                "Gateway");
+
+            // Assert
+            Assert.Equal(7, result.TotalWeight);
+
+            Assert.Equal(
+                new List<string>
+                {
+            "Sensor B",
+            "Sensor A",
+            "Gateway"
+                },
+                result.Path);
+        }
+
     }
 }
