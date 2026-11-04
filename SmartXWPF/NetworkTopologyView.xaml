@@ -120,6 +120,16 @@
                                Foreground="{StaticResource MutedTextBrush}"
                                FontSize="11"
                                Margin="0,5,0,12"/>
+                    <ComboBox
+    x:Name="CmbTopologyMode"
+    Width="220"
+    HorizontalAlignment="Left"
+    Margin="0,0,0,10"
+    SelectedIndex="0"
+    SelectionChanged="CmbTopologyMode_SelectionChanged">
+                        <ComboBoxItem Content="Full Mesh" />
+                        <ComboBoxItem Content="Minimum Spanning Tree" />
+                    </ComboBox>
 
                     <Border Background="#101418"
                             BorderBrush="{StaticResource BorderBrush}"

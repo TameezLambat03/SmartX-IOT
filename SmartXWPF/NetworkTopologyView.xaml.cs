@@ -22,6 +22,7 @@ public partial class NetworkTopologyView : UserControl
     private List<MeshNetworkNode> _networkNodes = new();
     private readonly NetworkTopologyRenderer _topologyRenderer;
     private List<MeshNetworkConnection> _networkConnections = new();
+    private List<MeshNetworkConnection>? _minimumSpanningTree;
     public NetworkTopologyView()
     {
         InitializeComponent();
@@ -32,8 +33,7 @@ public partial class NetworkTopologyView : UserControl
         _sensorApiService = new SensorApiService(apiService);
         _telemetryApiService = new TelemetryApiService(apiService);
         _meshNetworkApiService = new MeshNetworkApiService(apiService);
-        _sensorApiService = new SensorApiService(apiService);
-        _telemetryApiService = new TelemetryApiService(apiService);
+      
         _topologyRenderer = new NetworkTopologyRenderer();
 
         DpStartDate.SelectedDate = DateTime.Today;
@@ -75,6 +75,7 @@ public partial class NetworkTopologyView : UserControl
             CmbSensor.SelectedIndex = -1;
 
             BtnQueryHistory.IsEnabled = result.Sensors.Count > 0;
+            BtnFindRoute.IsEnabled = result.Sensors.Count > 0;
         }
         catch (Exception ex)
         {
@@ -85,15 +86,49 @@ public partial class NetworkTopologyView : UserControl
                 MessageBoxImage.Error);
         }
     }
-    private void BtnFindRoute_Click(
-        object sender,
-        RoutedEventArgs e)
+    private async void BtnFindRoute_Click(
+     object sender,
+     RoutedEventArgs e)
     {
-        MessageBox.Show(
-            "Network routing will be connected in the next implementation step.",
-            "Smart-X",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        if (CmbSensor.SelectedItem is not SensorProfile sensor)
+        {
+            LblRouteResult.Text = "Please select a sensor first.";
+            return;
+        }
+
+        BtnFindRoute.IsEnabled = false;
+        LblRouteResult.Text = "Calculating shortest route...";
+
+        try
+        {
+            MeshNetworkRoute? route =
+                await _meshNetworkApiService.GetShortestRouteAsync(
+                    sensor.DeviceMacAddress,
+                    "GATEWAY-01");
+
+            if (route == null || route.Path.Count == 0)
+            {
+                LblRouteResult.Text =
+                    "No route to the gateway could be found.";
+
+                return;
+            }
+
+            string routePath = string.Join(" → ", route.Path);
+
+            LblRouteResult.Text =
+                $"Shortest route: {routePath}\n" +
+                $"Total route weight: {route.TotalWeight:0.##}";
+        }
+        catch (Exception ex)
+        {
+            LblRouteResult.Text =
+                $"Could not calculate route: {ex.Message}";
+        }
+        finally
+        {
+            BtnFindRoute.IsEnabled = true;
+        }
     }
 
     private async void BtnQueryHistory_Click(
@@ -244,6 +279,45 @@ public partial class NetworkTopologyView : UserControl
             MessageBox.Show(
                 $"Could not load network topology: {ex.Message}",
                 "Smart-X",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+        private async void CmbTopologyMode_SelectionChanged(
+    object sender,
+    SelectionChangedEventArgs e)
+    {
+        if (_networkNodes.Count == 0)
+            return;
+
+        try
+        {
+            List<MeshNetworkConnection> connections;
+
+            if (CmbTopologyMode.SelectedIndex == 0)
+            {
+                // Display every connection in the network.
+                connections = _networkConnections;
+            }
+            else
+            {
+                // Retrieve the MST once, then reuse the result.
+                _minimumSpanningTree ??=
+                    await _meshNetworkApiService.GetMinimumSpanningTreeAsync();
+
+                connections = _minimumSpanningTree;
+            }
+
+            _topologyRenderer.Draw(
+                NetworkCanvas,
+                _networkNodes,
+                connections);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Unable to change topology view: {ex.Message}",
+                "Network Topology",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
