@@ -525,6 +525,16 @@ app.MapGet("/api/network/topology",
     {
         return Results.Ok(meshService.GetTopology());
     });
+// Returns all devices reachable from the gateway using BFS.
+app.MapGet("/api/network/reachable",
+    (MeshNetworkService meshService) =>
+    {
+        List<string> reachableDevices =
+            meshService.GetBreadthFirstTraversal(
+                MeshNetworkService.GatewayId);
+
+        return Results.Ok(reachableDevices);
+    });
 
 // Returns the minimum spanning tree calculated using Prim's algorithm.
 app.MapGet("/api/network/mst",

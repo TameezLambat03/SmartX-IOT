@@ -44,4 +44,12 @@ public class MeshNetworkApiService
 
         return await _client.GetFromJsonAsync<MeshNetworkRoute>(url);
     }
+    public async Task<List<string>> GetReachableDevicesAsync()
+    {
+        List<string>? devices =
+            await _client.GetFromJsonAsync<List<string>>(
+                "api/network/reachable");
+
+        return devices ?? new List<string>();
+    }
 }

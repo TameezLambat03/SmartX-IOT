@@ -62,6 +62,21 @@ public class MeshNetworkService
         AddSensorNode(environmentalSensor, "Environmental Sensor");
         AddSensorNode(powerSensor, "Power Consumption Sensor");
         AddSensorNode(actuatorSensor, "Actuator Sensor");
+        // Add a disconnected test device to demonstrate BFS reachability.
+        const string disconnectedDeviceId = "TEST-UNREACHABLE-01";
+        // Register it in the graph, but deliberately do not create any connections.
+        _graph.AddDevice(disconnectedDeviceId);
+        // Add it to the topology so WPF can display and count it.
+        _nodes.Add(new MeshNetworkNode
+        {
+            Id = disconnectedDeviceId,
+            Label = "Disconnected Test Node",
+            IsGateway = false,
+            Category = "Test",
+            DeploymentLocation = "Simulation"
+        });
+
+
 
         // Create simulated weighted connections between the gateway and sensors.
         AddConnection(GatewayId, environmentalSensor.DeviceMacAddress, 5);

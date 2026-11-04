@@ -256,11 +256,22 @@ public partial class NetworkTopologyView : UserControl
             // Update the network summary.
             LblTotalNodes.Text = topology.Nodes.Count.ToString();
 
-            // The current demo graph is connected, so every returned node
-            // should be reachable from the gateway.
-            LblReachableNodes.Text = topology.Nodes.Count.ToString();
+            // Ask the API for the actual BFS traversal results.
+            List<string> reachableDevices =
+                await _meshNetworkApiService.GetReachableDevicesAsync();
 
-            LblOfflineNodes.Text = "0";
+            // Count nodes that BFS can reach from the gateway.
+            HashSet<string> reachableSet =
+                new(reachableDevices, StringComparer.OrdinalIgnoreCase);
+
+            int reachableCount = topology.Nodes.Count(
+                node => reachableSet.Contains(node.Id));
+
+            // Any topology node not visited by BFS is considered unreachable.
+            int offlineCount = topology.Nodes.Count - reachableCount;
+
+            LblReachableNodes.Text = reachableCount.ToString();
+            LblOfflineNodes.Text = offlineCount.ToString();
 
             // We'll use these collections in the next step to draw the graph.
             _networkNodes = topology.Nodes;
