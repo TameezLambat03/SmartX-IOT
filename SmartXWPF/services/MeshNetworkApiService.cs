@@ -44,12 +44,31 @@ public class MeshNetworkApiService
 
         return await _client.GetFromJsonAsync<MeshNetworkRoute>(url);
     }
-    public async Task<List<string>> GetReachableDevicesAsync()
-    {
-        List<string>? devices =
-            await _client.GetFromJsonAsync<List<string>>(
-                "api/network/reachable");
+    // Retrieve devices explored using Breadth-First Search.
+public async Task<List<string>> GetReachableDevicesAsync(
+    string startDevice = "GATEWAY-01")
+{
+    string url =
+        $"api/network/reachable?startDevice={Uri.EscapeDataString(startDevice)}";
 
-        return devices ?? new List<string>();
-    }
+    List<string>? devices =
+        await _client.GetFromJsonAsync<List<string>>(url);
+
+    return devices ?? new List<string>();
+}
+
+// Retrieve devices explored using Depth-First Search.
+public async Task<List<string>> GetDepthFirstTraversalAsync(
+    string startDevice)
+{
+    string url =
+        $"api/network/depth-first?startDevice={Uri.EscapeDataString(startDevice)}";
+
+    List<string>? devices =
+        await _client.GetFromJsonAsync<List<string>>(url);
+
+    return devices ?? new List<string>();
+}
+
+   
 }

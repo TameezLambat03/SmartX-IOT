@@ -159,6 +159,81 @@
                 </StackPanel>
             </Border>
 
+            <!-- Network traversal -->
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+
+                    <TextBlock Text="Network Traversal"
+                   FontSize="16"
+                   FontWeight="SemiBold"/>
+
+                    <TextBlock Text="Explore the connected network using Breadth-First Search or Depth-First Search."
+                   Foreground="{StaticResource MutedTextBrush}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,5,0,12"/>
+
+                    <TextBlock Text="Starting Device"
+                   FontWeight="SemiBold"
+                   FontSize="11"
+                   Margin="0,0,0,6"/>
+
+                    <ComboBox x:Name="CmbTraversalStart"
+                  Height="36"
+                  Padding="8,4"
+                  Background="#20282D"
+                  Foreground="#101418"
+                  DisplayMemberPath="Id"
+                  Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Traversal Algorithm"
+                   FontWeight="SemiBold"
+                   FontSize="11"
+                   Margin="0,0,0,6"/>
+
+                    <ComboBox x:Name="CmbTraversalAlgorithm"
+                  Height="36"
+                  Padding="8,4"
+                  Background="#20282D"
+                  Foreground="#101418"
+                  SelectedIndex="0">
+
+                        <ComboBoxItem Content="Breadth-First Search (BFS)"/>
+                        <ComboBoxItem Content="Depth-First Search (DFS)"/>
+
+                    </ComboBox>
+
+                    <Button x:Name="BtnRunTraversal"
+                Content="Run Network Traversal"
+                Height="38"
+                Margin="0,12,0,0"
+                Background="#20C997"
+                Foreground="#101418"
+                FontWeight="Bold"
+                BorderThickness="0"
+                Cursor="Hand"
+                Click="BtnRunTraversal_Click"/>
+
+                    <TextBlock Text="Traversal Results"
+                   FontSize="12"
+                   FontWeight="SemiBold"
+                   Margin="0,16,0,6"/>
+
+                    <Border Background="#101418"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12">
+
+                        <TextBlock x:Name="LblTraversalResult"
+                       Text="Select a starting device and algorithm."
+                       Foreground="{StaticResource MutedTextBrush}"
+                       TextWrapping="Wrap"/>
+                    </Border>
+
+                </StackPanel>
+            </Border>
+
             <!-- Sensor routing -->
             <Border Style="{StaticResource SectionCardStyle}">
                 <StackPanel>

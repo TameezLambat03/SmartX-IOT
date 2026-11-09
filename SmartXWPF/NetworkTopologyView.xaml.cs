@@ -124,6 +124,12 @@ public partial class NetworkTopologyView : UserControl
             _networkNodes = topology.Nodes;
             _networkConnections = topology.Connections;
 
+            // Populate traversal choices with every network node.
+            CmbTraversalStart.ItemsSource = _networkNodes;
+
+            CmbTraversalStart.SelectedItem =
+                _networkNodes.FirstOrDefault(node => node.IsGateway);
+
             // Populate routing choices from the network topology.
             // Exclude the gateway, relays and disconnected test nodes.
             CmbRouteDevice.ItemsSource = _networkNodes
@@ -207,7 +213,67 @@ public partial class NetworkTopologyView : UserControl
             BtnFindRoute.IsEnabled = true;
         }
     }
+    // Run BFS or DFS from the selected starting device.
+    private async void BtnRunTraversal_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CmbTraversalStart.SelectedItem is not MeshNetworkNode startNode)
+        {
+            LblTraversalResult.Text =
+                "Please select a starting device.";
+            return;
+        }
 
+        if (CmbTraversalAlgorithm.SelectedItem is not ComboBoxItem selectedAlgorithm)
+        {
+            LblTraversalResult.Text =
+                "Please select a traversal algorithm.";
+            return;
+        }
+
+        bool useBfs = selectedAlgorithm.Content.ToString()!
+            .StartsWith("Breadth", StringComparison.OrdinalIgnoreCase);
+
+        BtnRunTraversal.IsEnabled = false;
+        LblTraversalResult.Text = "Traversing network...";
+
+        try
+        {
+            List<string> visitedDevices;
+
+            if (useBfs)
+            {
+                visitedDevices =
+                    await _meshNetworkApiService.GetReachableDevicesAsync(
+                        startNode.Id);
+            }
+            else
+            {
+                visitedDevices =
+                    await _meshNetworkApiService.GetDepthFirstTraversalAsync(
+                        startNode.Id);
+            }
+
+            string traversalOrder =
+                string.Join(" → ", visitedDevices);
+
+            LblTraversalResult.Text =
+                $"Algorithm: {(useBfs ? "BFS" : "DFS")}\n" +
+                $"Starting device: {startNode.Id}\n" +
+                $"Devices visited ({visitedDevices.Count}):\n" +
+                traversalOrder;
+        }
+        catch (Exception ex)
+        {
+            LblTraversalResult.Text =
+                $"Traversal failed: {ex.Message}";
+        }
+        finally
+        {
+            BtnRunTraversal.IsEnabled = true;
+        }
+    }
     // Query historical telemetry for actual registered sensors only.
     private async void BtnQueryHistory_Click(
         object sender,

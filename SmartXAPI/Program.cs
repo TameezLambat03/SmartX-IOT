@@ -535,6 +535,33 @@ app.MapGet("/api/network/reachable",
 
         return Results.Ok(reachableDevices);
     });
+// Returns devices explored using Depth-First Search.
+app.MapGet("/api/network/depth-first",
+    (string startDevice, MeshNetworkService meshService) =>
+    {
+        if (string.IsNullOrWhiteSpace(startDevice))
+        {
+            return Results.BadRequest(new
+            {
+                Message = "A starting device is required."
+            });
+        }
+
+        try
+        {
+            List<string> devices =
+                meshService.GetDepthFirstTraversal(startDevice);
+
+            return Results.Ok(devices);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new
+            {
+                Message = ex.Message
+            });
+        }
+    });
 
 // Returns the minimum spanning tree calculated using Prim's algorithm.
 app.MapGet("/api/network/mst",

@@ -56,8 +56,15 @@ namespace SmartX.Shared.Networking
         // BFS 
         public List<string> BreadthFirstSearch(string startDevice)
         {
-            startDevice = startDevice.Trim(); 
-
+            
+            if (string.IsNullOrWhiteSpace(startDevice))
+            {
+                throw new ArgumentException(
+                    "Starting device cannot be empty.",
+                    nameof(startDevice));
+            }
+            
+            startDevice = startDevice.Trim();
             if (!_adjacencyList.ContainsKey(startDevice)) // Check whether the starting device exists.
             {
                 throw new ArgumentException("Starting device does not exist.");
@@ -215,11 +222,19 @@ namespace SmartX.Shared.Networking
         {
             // Validate the starting device.
             if (string.IsNullOrWhiteSpace(startDevice))
-                throw new ArgumentException("Starting device cannot be empty.");
+            {
+                throw new ArgumentException(
+                    "Starting device cannot be empty.",
+                    nameof(startDevice));
+            }
 
             // Validate the destination device.
             if (string.IsNullOrWhiteSpace(destinationDevice))
-                throw new ArgumentException("Destination device cannot be empty.");
+            {
+                throw new ArgumentException(
+                    "Destination device cannot be empty.",
+                    nameof(destinationDevice));
+            }
 
             startDevice = startDevice.Trim();
             destinationDevice = destinationDevice.Trim();
@@ -257,7 +272,17 @@ namespace SmartX.Shared.Networking
             // Continue while there are devices waiting to be explored.
             while (queue.Count > 0)
             {
-                string currentDevice = queue.Dequeue();
+                if (!queue.TryDequeue(out string currentDevice, out double queuedDistance))
+                {
+                    continue;
+                }
+
+                // Ignore outdated entries where a cheaper route has
+                // already been discovered.
+                if (queuedDistance > distances[currentDevice])
+                {
+                    continue;
+                }
 
                 // Stop if we have reached the destination.
                 if (currentDevice.Equals(
@@ -308,4 +333,5 @@ namespace SmartX.Shared.Networking
         }
 
     }
+
 }

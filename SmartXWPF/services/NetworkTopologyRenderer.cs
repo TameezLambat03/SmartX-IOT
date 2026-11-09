@@ -104,7 +104,7 @@ public class NetworkTopologyRenderer
                 !levels.ContainsKey(node.Id))
             .ToList();
 
-        double offlineY = height - 55;
+        double offlineY = height - 90;
         double offlineSpacing = width / (disconnectedNodes.Count + 1);
 
         for (int i = 0; i < disconnectedNodes.Count; i++)
