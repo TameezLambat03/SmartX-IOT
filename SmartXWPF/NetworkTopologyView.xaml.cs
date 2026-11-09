@@ -1,39 +1,43 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Controls;
-using SmartX.Shared.Models;
-using SmartXWPF.Services;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Threading.Tasks;
-using SmartX.Shared.Enums;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using SmartX.Shared.Enums;
+using SmartX.Shared.Models;
 using SmartXWPF.DTOs;
+using SmartXWPF.Services;
 
 namespace SmartXWPF;
-
-
 
 public partial class NetworkTopologyView : UserControl
 {
     private readonly SensorApiService _sensorApiService;
     private readonly TelemetryApiService _telemetryApiService;
     private readonly MeshNetworkApiService _meshNetworkApiService;
-    private List<MeshNetworkNode> _networkNodes = new();
+
     private readonly NetworkTopologyRenderer _topologyRenderer;
+
+    private List<MeshNetworkNode> _networkNodes = new();
     private List<MeshNetworkConnection> _networkConnections = new();
     private List<MeshNetworkConnection>? _minimumSpanningTree;
+
     public NetworkTopologyView()
     {
         InitializeComponent();
+
         string? apiBaseUrl =
-    ConfigurationManager.AppSettings["ApiBaseUrl"];
-        //constructor initialisations 
+            ConfigurationManager.AppSettings["ApiBaseUrl"];
+
         ApiService apiService = new ApiService(apiBaseUrl!);
+
         _sensorApiService = new SensorApiService(apiService);
         _telemetryApiService = new TelemetryApiService(apiService);
         _meshNetworkApiService = new MeshNetworkApiService(apiService);
-      
+
         _topologyRenderer = new NetworkTopologyRenderer();
 
         DpStartDate.SelectedDate = DateTime.Today;
@@ -44,15 +48,16 @@ public partial class NetworkTopologyView : UserControl
 
         Loaded += NetworkTopologyView_Loaded;
     }
+
     private async void NetworkTopologyView_Loaded(
-    object sender,
-    RoutedEventArgs e)
+        object sender,
+        RoutedEventArgs e)
     {
         await LoadSensorsAsync();
         await LoadTopologyAsync();
     }
 
-    //load sensors method 
+    // Load actual registered sensors for historical telemetry.
     private async Task LoadSensorsAsync()
     {
         try
@@ -71,11 +76,9 @@ public partial class NetworkTopologyView : UserControl
             }
 
             CmbSensor.ItemsSource = result.Sensors;
-            CmbSensor.DisplayMemberPath = nameof(SensorProfile.DeviceMacAddress);
             CmbSensor.SelectedIndex = -1;
 
             BtnQueryHistory.IsEnabled = result.Sensors.Count > 0;
-            BtnFindRoute.IsEnabled = result.Sensors.Count > 0;
         }
         catch (Exception ex)
         {
@@ -86,13 +89,87 @@ public partial class NetworkTopologyView : UserControl
                 MessageBoxImage.Error);
         }
     }
-    private async void BtnFindRoute_Click(
-     object sender,
-     RoutedEventArgs e)
+
+    // Load all graph nodes and populate the routing selector.
+    private async Task LoadTopologyAsync()
     {
-        if (CmbSensor.SelectedItem is not SensorProfile sensor)
+        try
         {
-            LblRouteResult.Text = "Please select a sensor first.";
+            MeshNetworkTopology? topology =
+                await _meshNetworkApiService.GetTopologyAsync();
+
+            if (topology == null)
+            {
+                LblHistoryStatus.Text =
+                    "Could not retrieve network topology.";
+                return;
+            }
+
+            LblTotalNodes.Text = topology.Nodes.Count.ToString();
+
+            List<string> reachableDevices =
+                await _meshNetworkApiService.GetReachableDevicesAsync();
+
+            HashSet<string> reachableSet =
+                new(reachableDevices, StringComparer.OrdinalIgnoreCase);
+
+            int reachableCount = topology.Nodes.Count(
+                node => reachableSet.Contains(node.Id));
+
+            int offlineCount = topology.Nodes.Count - reachableCount;
+
+            LblReachableNodes.Text = reachableCount.ToString();
+            LblOfflineNodes.Text = offlineCount.ToString();
+
+            _networkNodes = topology.Nodes;
+            _networkConnections = topology.Connections;
+
+            // Populate routing choices from the network topology.
+            // Exclude the gateway, relays and disconnected test nodes.
+            CmbRouteDevice.ItemsSource = _networkNodes
+                .Where(node =>
+                    !node.IsGateway &&
+                    !string.Equals(
+                        node.Category,
+                        "Relay",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(
+                        node.Category,
+                        "Test",
+                        StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            CmbRouteDevice.SelectedIndex = -1;
+            BtnFindRoute.IsEnabled = CmbRouteDevice.Items.Count > 0;
+
+            _topologyRenderer.Draw(
+                NetworkCanvas,
+                _networkNodes,
+                _networkConnections);
+
+            LblHistoryStatus.Text =
+                $"Network loaded: {topology.Nodes.Count} nodes and " +
+                $"{topology.Connections.Count} connections.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Could not load network topology: {ex.Message}",
+                "Smart-X",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    // Calculate a Dijkstra shortest path from any selectable sensor node.
+    private async void BtnFindRoute_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CmbRouteDevice.SelectedItem is not MeshNetworkNode device)
+        {
+            LblRouteResult.Text =
+                "Please select a device first.";
             return;
         }
 
@@ -103,20 +180,20 @@ public partial class NetworkTopologyView : UserControl
         {
             MeshNetworkRoute? route =
                 await _meshNetworkApiService.GetShortestRouteAsync(
-                    sensor.DeviceMacAddress,
+                    device.Id,
                     "GATEWAY-01");
 
             if (route == null || route.Path.Count == 0)
             {
                 LblRouteResult.Text =
                     "No route to the gateway could be found.";
-
                 return;
             }
 
             string routePath = string.Join(" → ", route.Path);
 
             LblRouteResult.Text =
+                $"Starting device: {device.Id}\n" +
                 $"Shortest route: {routePath}\n" +
                 $"Total route weight: {route.TotalWeight:0.##}";
         }
@@ -131,20 +208,23 @@ public partial class NetworkTopologyView : UserControl
         }
     }
 
+    // Query historical telemetry for actual registered sensors only.
     private async void BtnQueryHistory_Click(
-     object sender,
-     RoutedEventArgs e)
+        object sender,
+        RoutedEventArgs e)
     {
         if (CmbSensor.SelectedItem is not SensorProfile sensor)
         {
-            LblHistoryStatus.Text = "Please select a sensor.";
+            LblHistoryStatus.Text =
+                "Please select a registered sensor.";
             return;
         }
 
         if (DpStartDate.SelectedDate == null ||
             DpEndDate.SelectedDate == null)
         {
-            LblHistoryStatus.Text = "Please select both dates.";
+            LblHistoryStatus.Text =
+                "Please select both dates.";
             return;
         }
 
@@ -173,7 +253,9 @@ public partial class NetworkTopologyView : UserControl
                     {
                         var history =
                             await _telemetryApiService.GetEnvironmentalHistoryAsync(
-                                start, end, sensor.DeviceMacAddress);
+                                start,
+                                end,
+                                sensor.DeviceMacAddress);
 
                         rows.AddRange(history.Select(packet => (object)new
                         {
@@ -190,7 +272,9 @@ public partial class NetworkTopologyView : UserControl
                     {
                         var history =
                             await _telemetryApiService.GetPowerHistoryAsync(
-                                start, end, sensor.DeviceMacAddress);
+                                start,
+                                end,
+                                sensor.DeviceMacAddress);
 
                         rows.AddRange(history.Select(packet => (object)new
                         {
@@ -207,7 +291,9 @@ public partial class NetworkTopologyView : UserControl
                     {
                         var history =
                             await _telemetryApiService.GetActuatorHistoryAsync(
-                                start, end, sensor.DeviceMacAddress);
+                                start,
+                                end,
+                                sensor.DeviceMacAddress);
 
                         rows.AddRange(history.Select(packet => (object)new
                         {
@@ -227,7 +313,8 @@ public partial class NetworkTopologyView : UserControl
                 .ToList();
 
             LblHistoryStatus.Text =
-                $"Loaded {rows.Count} historical reading(s) for {sensor.DeviceMacAddress}.";
+                $"Loaded {rows.Count} historical reading(s) for " +
+                $"{sensor.DeviceMacAddress}.";
         }
         catch (Exception ex)
         {
@@ -238,65 +325,12 @@ public partial class NetworkTopologyView : UserControl
         {
             BtnQueryHistory.IsEnabled = true;
         }
-
     }
-    private async Task LoadTopologyAsync()
-    {
-        try
-        {
-            MeshNetworkTopology? topology =
-                await _meshNetworkApiService.GetTopologyAsync();
 
-            if (topology == null)
-            {
-                LblHistoryStatus.Text = "Could not retrieve network topology.";
-                return;
-            }
-
-            // Update the network summary.
-            LblTotalNodes.Text = topology.Nodes.Count.ToString();
-
-            // Ask the API for the actual BFS traversal results.
-            List<string> reachableDevices =
-                await _meshNetworkApiService.GetReachableDevicesAsync();
-
-            // Count nodes that BFS can reach from the gateway.
-            HashSet<string> reachableSet =
-                new(reachableDevices, StringComparer.OrdinalIgnoreCase);
-
-            int reachableCount = topology.Nodes.Count(
-                node => reachableSet.Contains(node.Id));
-
-            // Any topology node not visited by BFS is considered unreachable.
-            int offlineCount = topology.Nodes.Count - reachableCount;
-
-            LblReachableNodes.Text = reachableCount.ToString();
-            LblOfflineNodes.Text = offlineCount.ToString();
-
-            // We'll use these collections in the next step to draw the graph.
-            _networkNodes = topology.Nodes;
-            _networkConnections = topology.Connections;
-            // Render the retrieved network topology on the WPF canvas.
-            _topologyRenderer.Draw(
-                NetworkCanvas,
-                _networkNodes,
-                _networkConnections);
-            LblHistoryStatus.Text =
-                $"Network loaded: {topology.Nodes.Count} nodes and " +
-                $"{topology.Connections.Count} connections.";
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(
-                $"Could not load network topology: {ex.Message}",
-                "Smart-X",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-    }
-        private async void CmbTopologyMode_SelectionChanged(
-    object sender,
-    SelectionChangedEventArgs e)
+    // Switch between the full mesh and minimum spanning tree.
+    private async void CmbTopologyMode_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
     {
         if (_networkNodes.Count == 0)
             return;
@@ -307,14 +341,13 @@ public partial class NetworkTopologyView : UserControl
 
             if (CmbTopologyMode.SelectedIndex == 0)
             {
-                // Display every connection in the network.
                 connections = _networkConnections;
             }
             else
             {
-                // Retrieve the MST once, then reuse the result.
                 _minimumSpanningTree ??=
-                    await _meshNetworkApiService.GetMinimumSpanningTreeAsync();
+                    await _meshNetworkApiService
+                        .GetMinimumSpanningTreeAsync();
 
                 connections = _minimumSpanningTree;
             }

@@ -1,4 +1,5 @@
-﻿using SmartXWPF.DTOs;
+﻿
+using SmartXWPF.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,83 +12,158 @@ namespace SmartXWPF.Services;
 
 public class NetworkTopologyRenderer
 {
-    // Draws the supplied network nodes and connections onto a WPF Canvas.
     public void Draw(
         Canvas canvas,
         List<MeshNetworkNode> nodes,
         List<MeshNetworkConnection> connections)
     {
-        // Remove the previous drawing before rendering the new topology.
         canvas.Children.Clear();
 
         if (nodes.Count == 0)
             return;
 
-        // Use the actual canvas dimensions, with sensible fallbacks.
-        double width = canvas.ActualWidth > 0 ? canvas.ActualWidth : 700;
-        double height = canvas.ActualHeight > 0 ? canvas.ActualHeight : 260;
-
-        // Define the positions of all nodes.
-        Dictionary<string, Point> positions =
-            CalculateNodePositions(nodes, width, height);
-
-        // Draw connections first so they appear behind the nodes.
-        foreach (MeshNetworkConnection connection in connections)
-        {
-            if (!positions.TryGetValue(connection.DeviceA, out Point start) ||
-                !positions.TryGetValue(connection.DeviceB, out Point end))
-            {
-                continue;
-            }
-
-            DrawConnection(canvas, start, end, connection.Weight);
-        }
-
-        // Draw the nodes over the connections.
-        foreach (MeshNetworkNode node in nodes)
-        {
-            if (positions.TryGetValue(node.Id, out Point position))
-            {
-                DrawNode(canvas, node, position);
-            }
-        }
-    }
-
-    // Assigns the gateway to the top and distributes sensors underneath it.
-    private Dictionary<string, Point> CalculateNodePositions(
-        List<MeshNetworkNode> nodes,
-        double width,
-        double height)
-    {
-        Dictionary<string, Point> positions = new();
+        double width = Math.Max(canvas.ActualWidth, 900);
+        double height = Math.Max(canvas.ActualHeight, 520);
 
         MeshNetworkNode? gateway =
             nodes.FirstOrDefault(node => node.IsGateway);
 
-        List<MeshNetworkNode> sensors =
-            nodes.Where(node => !node.IsGateway).ToList();
+        if (gateway == null)
+            return;
 
-        // Position the gateway centrally near the top.
-        if (gateway != null)
+        // Build adjacency using only the supplied connections.
+        Dictionary<string, List<string>> adjacency =
+            nodes.ToDictionary(
+                node => node.Id,
+                _ => new List<string>(),
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (MeshNetworkConnection connection in connections)
         {
-            positions[gateway.Id] = new Point(width / 2, 55);
+            if (adjacency.ContainsKey(connection.DeviceA) &&
+                adjacency.ContainsKey(connection.DeviceB))
+            {
+                adjacency[connection.DeviceA].Add(connection.DeviceB);
+                adjacency[connection.DeviceB].Add(connection.DeviceA);
+            }
         }
 
-        // Spread sensors evenly across the lower part of the canvas.
-        for (int i = 0; i < sensors.Count; i++)
-        {
-            double spacing = width / (sensors.Count + 1);
-            double x = spacing * (i + 1);
+        // Determine hop levels from the gateway using BFS.
+        Dictionary<string, int> levels =
+            new(StringComparer.OrdinalIgnoreCase);
 
-            positions[sensors[i].Id] = new Point(
-                x,
-                Math.Min(height - 65, 190));
+        Queue<string> queue = new();
+
+        levels[gateway.Id] = 0;
+        queue.Enqueue(gateway.Id);
+
+        while (queue.Count > 0)
+        {
+            string current = queue.Dequeue();
+
+            foreach (string neighbour in adjacency[current])
+            {
+                if (levels.ContainsKey(neighbour))
+                    continue;
+
+                levels[neighbour] = levels[current] + 1;
+                queue.Enqueue(neighbour);
+            }
         }
 
-        return positions;
+        // Place connected devices in BFS levels.
+        Dictionary<string, Point> positions = new();
+
+        positions[gateway.Id] = new Point(width / 2, 55);
+
+        var connectedLevels = nodes
+            .Where(node =>
+                !node.IsGateway &&
+                levels.ContainsKey(node.Id))
+            .GroupBy(node => levels[node.Id])
+            .OrderBy(group => group.Key);
+
+        foreach (var level in connectedLevels)
+        {
+            List<MeshNetworkNode> levelNodes = level.ToList();
+
+            double spacing = width / (levelNodes.Count + 1);
+            double y = 55 + level.Key * 105;
+
+            for (int i = 0; i < levelNodes.Count; i++)
+            {
+                positions[levelNodes[i].Id] =
+                    new Point(spacing * (i + 1), y);
+            }
+        }
+
+        // Place disconnected nodes in a separate bottom section.
+        List<MeshNetworkNode> disconnectedNodes = nodes
+            .Where(node =>
+                !node.IsGateway &&
+                !levels.ContainsKey(node.Id))
+            .ToList();
+
+        double offlineY = height - 55;
+        double offlineSpacing = width / (disconnectedNodes.Count + 1);
+
+        for (int i = 0; i < disconnectedNodes.Count; i++)
+        {
+            positions[disconnectedNodes[i].Id] =
+                new Point(offlineSpacing * (i + 1), offlineY);
+        }
+
+        // Draw connections behind the nodes.
+        foreach (MeshNetworkConnection connection in connections)
+        {
+            if (!positions.TryGetValue(connection.DeviceA, out Point start) ||
+                !positions.TryGetValue(connection.DeviceB, out Point end))
+                continue;
+
+            // Never draw an edge involving an unreachable node.
+            if (!levels.ContainsKey(connection.DeviceA) ||
+                !levels.ContainsKey(connection.DeviceB))
+                continue;
+
+            DrawConnection(canvas, start, end, connection.Weight);
+        }
+
+        // Draw connected nodes.
+        foreach (MeshNetworkNode node in nodes)
+        {
+            if (levels.ContainsKey(node.Id) &&
+                positions.TryGetValue(node.Id, out Point position))
+            {
+                DrawNode(canvas, node, position, false);
+            }
+        }
+
+        // Draw offline section.
+        if (disconnectedNodes.Count > 0)
+        {
+            TextBlock offlineHeading = new()
+            {
+                Text = "OFFLINE / UNREACHABLE",
+                Foreground = Brushes.IndianRed,
+                FontSize = 11,
+                FontWeight = FontWeights.Bold
+            };
+
+            Canvas.SetLeft(offlineHeading, 12);
+            Canvas.SetTop(offlineHeading, offlineY - 42);
+            canvas.Children.Add(offlineHeading);
+
+            foreach (MeshNetworkNode node in disconnectedNodes)
+            {
+                DrawNode(
+                    canvas,
+                    node,
+                    positions[node.Id],
+                    true);
+            }
+        }
     }
 
-    // Draws a weighted connection between two nodes.
     private void DrawConnection(
         Canvas canvas,
         Point start,
@@ -100,63 +176,95 @@ public class NetworkTopologyRenderer
             Y1 = start.Y,
             X2 = end.X,
             Y2 = end.Y,
-            Stroke = new SolidColorBrush(Color.FromRgb(75, 105, 115)),
+            Stroke = new SolidColorBrush(
+                Color.FromRgb(75, 105, 115)),
             StrokeThickness = 2
         };
 
         canvas.Children.Add(line);
 
-        // Place the weight label at the midpoint of the connection.
         TextBlock weightLabel = new()
         {
             Text = weight.ToString("0.##"),
             Foreground = Brushes.White,
-            Background = new SolidColorBrush(Color.FromRgb(32, 40, 45)),
+            Background = new SolidColorBrush(
+                Color.FromRgb(32, 40, 45)),
             FontSize = 11,
             FontWeight = FontWeights.Bold,
             Padding = new Thickness(5, 2, 5, 2)
         };
 
-        Canvas.SetLeft(weightLabel, (start.X + end.X) / 2 - 10);
-        Canvas.SetTop(weightLabel, (start.Y + end.Y) / 2 - 12);
+        Canvas.SetLeft(
+            weightLabel,
+            (start.X + end.X) / 2 - 10);
+
+        Canvas.SetTop(
+            weightLabel,
+            (start.Y + end.Y) / 2 - 12);
 
         canvas.Children.Add(weightLabel);
     }
 
-    // Draws a circular node with its label and identifier.
     private void DrawNode(
         Canvas canvas,
         MeshNetworkNode node,
-        Point position)
+        Point position,
+        bool disconnected)
     {
         const double nodeSize = 48;
+
+        bool isRelay = string.Equals(
+            node.Category,
+            "Relay",
+            StringComparison.OrdinalIgnoreCase);
+
+        Brush fill;
+        Brush stroke;
+        string icon;
+
+        if (node.IsGateway)
+        {
+            fill = new SolidColorBrush(Color.FromRgb(32, 201, 151));
+            stroke = Brushes.White;
+            icon = "GW";
+        }
+        else if (disconnected)
+        {
+            fill = new SolidColorBrush(Color.FromRgb(90, 45, 45));
+            stroke = Brushes.IndianRed;
+            icon = "OFF";
+        }
+        else if (isRelay)
+        {
+            fill = new SolidColorBrush(Color.FromRgb(80, 90, 130));
+            stroke = new SolidColorBrush(Color.FromRgb(145, 155, 220));
+            icon = "R";
+        }
+        else
+        {
+            fill = new SolidColorBrush(Color.FromRgb(40, 65, 78));
+            stroke = new SolidColorBrush(Color.FromRgb(32, 201, 151));
+            icon = "SN";
+        }
 
         Ellipse circle = new()
         {
             Width = nodeSize,
             Height = nodeSize,
-            Fill = node.IsGateway
-                ? new SolidColorBrush(Color.FromRgb(32, 201, 151))
-                : new SolidColorBrush(Color.FromRgb(40, 65, 78)),
-            Stroke = node.IsGateway
-                ? Brushes.White
-                : new SolidColorBrush(Color.FromRgb(32, 201, 151)),
+            Fill = fill,
+            Stroke = stroke,
             StrokeThickness = 2
         };
 
         Canvas.SetLeft(circle, position.X - nodeSize / 2);
         Canvas.SetTop(circle, position.Y - nodeSize / 2);
-
         canvas.Children.Add(circle);
 
-        // Show a short identifier inside the node.
         TextBlock nodeIcon = new()
         {
-            Text = node.IsGateway ? "GW" : "SN",
-            Foreground = node.IsGateway
-                ? new SolidColorBrush(Color.FromRgb(16, 20, 24))
-                : Brushes.White,
-            FontSize = 13,
+            Text = icon,
+            Foreground = Brushes.White,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Width = nodeSize,
             TextAlignment = TextAlignment.Center
@@ -164,14 +272,14 @@ public class NetworkTopologyRenderer
 
         Canvas.SetLeft(nodeIcon, position.X - nodeSize / 2);
         Canvas.SetTop(nodeIcon, position.Y - 9);
-
         canvas.Children.Add(nodeIcon);
 
-        // Show the friendly name beneath the node.
         TextBlock label = new()
         {
             Text = node.Label,
-            Foreground = Brushes.White,
+            Foreground = disconnected
+                ? Brushes.IndianRed
+                : Brushes.White,
             FontSize = 10,
             Width = 130,
             TextAlignment = TextAlignment.Center,
@@ -180,7 +288,6 @@ public class NetworkTopologyRenderer
 
         Canvas.SetLeft(label, position.X - 65);
         Canvas.SetTop(label, position.Y + 29);
-
         canvas.Children.Add(label);
     }
 }

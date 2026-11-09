@@ -78,11 +78,92 @@ public class MeshNetworkService
 
 
 
-        // Create simulated weighted connections between the gateway and sensors.
+        // Create additional simulated devices to expand the mesh network.
+        MeshNetworkNode[] simulatedDevices =
+        {
+    new()
+    {
+        Id = "RELAY-01",
+        Label = "Mesh Relay 01",
+        Category = "Relay",
+        DeploymentLocation = "Zone A"
+    },
+    new()
+    {
+        Id = "RELAY-02",
+        Label = "Mesh Relay 02",
+        Category = "Relay",
+        DeploymentLocation = "Zone B"
+    },
+    new()
+    {
+        Id = "ENV-SIM-02",
+        Label = "Environmental Sensor 02",
+        Category = "Environmental",
+        DeploymentLocation = "Zone A"
+    },
+    new()
+    {
+        Id = "POWER-SIM-02",
+        Label = "Power Sensor 02",
+        Category = "Power",
+        DeploymentLocation = "Zone B"
+    },
+    new()
+    {
+        Id = "ACTUATOR-SIM-02",
+        Label = "Actuator 02",
+        Category = "Actuator",
+        DeploymentLocation = "Zone B"
+    },
+    new()
+    {
+        Id = "RELAY-03",
+        Label = "Mesh Relay 03",
+        Category = "Relay",
+        DeploymentLocation = "Zone C"
+    },
+    new()
+    {
+        Id = "ENV-SIM-03",
+        Label = "Environmental Sensor 03",
+        Category = "Environmental",
+        DeploymentLocation = "Zone C"
+    },
+    new()
+    {
+        Id = "POWER-SIM-03",
+        Label = "Power Sensor 03",
+        Category = "Power",
+        DeploymentLocation = "Zone C"
+    },
+    new()
+    {
+        Id = "ACTUATOR-SIM-03",
+        Label = "Actuator 03",
+        Category = "Actuator",
+        DeploymentLocation = "Zone C"
+    },
+    new()
+    {
+        Id = "RELAY-04",
+        Label = "Mesh Relay 04",
+        Category = "Relay",
+        DeploymentLocation = "Zone D"
+    }
+};
+
+        // Register each simulated device in both the graph and API topology.
+        foreach (MeshNetworkNode device in simulatedDevices)
+        {
+            _graph.AddDevice(device.Id);
+            _nodes.Add(device);
+        }
+
+        // Preserve the original connections.
         AddConnection(GatewayId, environmentalSensor.DeviceMacAddress, 5);
         AddConnection(GatewayId, powerSensor.DeviceMacAddress, 8);
 
-        // Connect the sensors to one another to form a mesh rather than a simple star.
         AddConnection(
             environmentalSensor.DeviceMacAddress,
             powerSensor.DeviceMacAddress,
@@ -98,10 +179,38 @@ public class MeshNetworkService
             actuatorSensor.DeviceMacAddress,
             3);
 
-        // Mark the network as configured so it cannot accidentally be duplicated.
+        // Connect the original sensors to the expanded mesh.
+        AddConnection(environmentalSensor.DeviceMacAddress, "RELAY-01", 4);
+        AddConnection(powerSensor.DeviceMacAddress, "RELAY-02", 3);
+        AddConnection(actuatorSensor.DeviceMacAddress, "RELAY-03", 5);
+
+        // Gateway connections.
+        AddConnection(GatewayId, "RELAY-01", 3);
+        AddConnection(GatewayId, "RELAY-02", 7);
+
+        // Zone A connections.
+        AddConnection("RELAY-01", "ENV-SIM-02", 2);
+        AddConnection("RELAY-01", "POWER-SIM-02", 5);
+
+        // Zone B connections.
+        AddConnection("RELAY-02", "POWER-SIM-02", 2);
+        AddConnection("RELAY-02", "ACTUATOR-SIM-02", 4);
+
+        // Zone C connections.
+        AddConnection("ENV-SIM-02", "RELAY-03", 3);
+        AddConnection("RELAY-03", "ACTUATOR-SIM-03", 2);
+        AddConnection("POWER-SIM-02", "ACTUATOR-SIM-03", 6);
+
+        // Zone D connections.
+        AddConnection("RELAY-03", "RELAY-04", 4);
+        AddConnection("RELAY-04", "ENV-SIM-03", 2);
+        AddConnection("RELAY-04", "POWER-SIM-03", 3);
+        AddConnection("ACTUATOR-SIM-02", "POWER-SIM-03", 5);
+        AddConnection("ACTUATOR-SIM-03", "ENV-SIM-03", 4);
+
+        // Mark the network as configured.
         _isConfigured = true;
     }
-
     private void AddSensorNode(SensorProfile sensor, string label)
     {
         // Add the sensor to the graph so traversal and routing algorithms can use it.

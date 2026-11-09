@@ -1,6 +1,7 @@
 ﻿
 using SmartX.Shared.Networking;
 using Xunit;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -29,15 +30,10 @@ namespace SmartX.Tests
         [Fact]
         public void AddConnection_ShouldConnectBothDevices()
         {
-            // Arrange
             MeshNetWorkGraph graph = new();
-            graph.AddDevice("Gateway");
-            graph.AddDevice("Sensor A");
 
-            // Act
             graph.AddConnection("Gateway", "Sensor A", 5);
 
-            // Assert
             List<string> traversal =
                 graph.BreadthFirstSearch("Gateway");
 
@@ -47,32 +43,39 @@ namespace SmartX.Tests
         [Fact]
         public void BreadthFirstSearch_ShouldVisitAllReachableDevices()
         {
-            // Arrange
             MeshNetWorkGraph graph = CreateTestGraph();
 
-            // Act
             List<string> result =
                 graph.BreadthFirstSearch("Gateway");
 
-            // Assert
             Assert.Equal(4, result.Count);
             Assert.Contains("Gateway", result);
             Assert.Contains("Sensor A", result);
             Assert.Contains("Sensor B", result);
             Assert.Contains("Sensor C", result);
+        }
+
+        [Fact]
+        public void BreadthFirstSearch_ShouldExcludeDisconnectedDevices()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+            graph.AddDevice("Disconnected");
+
+            List<string> result =
+                graph.BreadthFirstSearch("Gateway");
+
+            Assert.Equal(4, result.Count);
+            Assert.DoesNotContain("Disconnected", result);
         }
 
         [Fact]
         public void DepthFirstSearch_ShouldVisitAllReachableDevices()
         {
-            // Arrange
             MeshNetWorkGraph graph = CreateTestGraph();
 
-            // Act
             List<string> result =
                 graph.DepthFirstSearch("Gateway");
 
-            // Assert
             Assert.Equal(4, result.Count);
             Assert.Contains("Gateway", result);
             Assert.Contains("Sensor A", result);
@@ -81,46 +84,125 @@ namespace SmartX.Tests
         }
 
         [Fact]
+        public void DepthFirstSearch_ShouldExcludeDisconnectedDevices()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+            graph.AddDevice("Disconnected");
+
+            List<string> result =
+                graph.DepthFirstSearch("Gateway");
+
+            Assert.Equal(4, result.Count);
+            Assert.DoesNotContain("Disconnected", result);
+        }
+
+        [Fact]
         public void MinimumSpanningTree_ShouldReturnMinimumTotalWeight()
         {
-            // Arrange
             MeshNetWorkGraph graph = CreateTestGraph();
 
-            // Act
             var result =
                 graph.MinimumSpanningTree("Gateway");
 
             double totalWeight =
                 result.Sum(edge => edge.Weight);
 
-            // Assert
             Assert.Equal(3, result.Count);
             Assert.Equal(10, totalWeight);
         }
-        //Dijkstra's test
+
+        [Fact]
+        public void MinimumSpanningTree_ShouldExcludeDisconnectedDevices()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+            graph.AddDevice("Disconnected");
+
+            var result =
+                graph.MinimumSpanningTree("Gateway");
+
+            Assert.Equal(3, result.Count);
+
+            Assert.DoesNotContain(
+                result,
+                edge => edge.DeviceA == "Disconnected" ||
+                        edge.DeviceB == "Disconnected");
+        }
+
         [Fact]
         public void FindShortestPath_ShouldReturnCheapestRoute()
         {
-            // Arrange
             MeshNetWorkGraph graph = CreateTestGraph();
 
-            // Act
             var result = graph.FindShortestPath(
                 "Sensor B",
                 "Gateway");
 
-            // Assert
             Assert.Equal(7, result.TotalWeight);
 
             Assert.Equal(
                 new List<string>
                 {
-            "Sensor B",
-            "Sensor A",
-            "Gateway"
+                    "Sensor B",
+                    "Sensor A",
+                    "Gateway"
                 },
                 result.Path);
         }
 
+        [Fact]
+        public void FindShortestPath_ShouldReturnEmptyPathWhenDestinationIsUnreachable()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+            graph.AddDevice("Disconnected");
+
+            var result = graph.FindShortestPath(
+                "Gateway",
+                "Disconnected");
+
+            Assert.Empty(result.Path);
+            Assert.Equal(
+                double.PositiveInfinity,
+                result.TotalWeight);
+        }
+
+        [Fact]
+        public void FindShortestPath_ShouldReturnZeroWeightWhenStartEqualsDestination()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+
+            var result = graph.FindShortestPath(
+                "Gateway",
+                "Gateway");
+
+            Assert.Single(result.Path);
+            Assert.Equal("Gateway", result.Path[0]);
+            Assert.Equal(0, result.TotalWeight);
+        }
+
+        [Fact]
+        public void Graph_ShouldTreatDeviceIdentifiersAsCaseInsensitive()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+
+            var result = graph.FindShortestPath(
+                "gateway",
+                "SENSOR A");
+
+            Assert.Equal(5, result.TotalWeight);
+            Assert.Equal(2, result.Path.Count);
+        }
+
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(double.NaN)]
+        [InlineData(double.PositiveInfinity)]
+        [InlineData(double.NegativeInfinity)]
+        public void AddConnection_ShouldRejectInvalidWeights(double weight)
+        {
+            MeshNetWorkGraph graph = new();
+
+            Assert.Throws<ArgumentException>(() =>
+                graph.AddConnection("Gateway", "Sensor A", weight));
+        }
     }
 }

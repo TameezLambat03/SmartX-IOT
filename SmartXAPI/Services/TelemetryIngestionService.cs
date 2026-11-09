@@ -239,32 +239,6 @@ public class TelemetryIngestionService
         _currentActuatorBuffer.Clear();
     }
 
-    // Add a packet under its timestamp and enforce the record limit.
-    private static void AddTimestampedLog<T>(
-        SortedDictionary<DateTime, List<TelemetryPacket<T>>> logs,
-        TelemetryPacket<T> packet)
-    {
-        if (!logs.TryGetValue(packet.Timestamp, out List<TelemetryPacket<T>>? packets))
-        {
-            packets = new List<TelemetryPacket<T>>();
-            logs.Add(packet.Timestamp, packets);
-        }
-
-        packets.Add(packet);
-
-        while (logs.Sum(entry => entry.Value.Count) > MaxTimestampedRecords)
-        {
-            KeyValuePair<DateTime, List<TelemetryPacket<T>>> oldestEntry =
-                logs.First();
-
-            oldestEntry.Value.RemoveAt(0);
-
-            if (oldestEntry.Value.Count == 0)
-            {
-                logs.Remove(oldestEntry.Key);
-            }
-        }
-    }
     // Return all environmental packets in timestamp order.
     public IReadOnlyList<TelemetryPacket<float>>
         GetEnvironmentalTimestampedLogs()
