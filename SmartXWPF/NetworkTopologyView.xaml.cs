@@ -132,6 +132,21 @@ public partial class NetworkTopologyView : UserControl
 
             _networkNodes = topology.Nodes;
             _networkConnections = topology.Connections;
+            // Calculate the total cost of the full mesh.
+            double fullMeshCost = _networkConnections.Sum(
+                connection => connection.Weight);
+
+            // Recalculate the minimum spanning tree.
+            _minimumSpanningTree =
+                await _meshNetworkApiService.GetMinimumSpanningTreeAsync();
+
+            double mstCost = _minimumSpanningTree.Sum(
+                connection => connection.Weight);
+
+            // Update the cost comparison cards.
+            LblFullMeshCost.Text = fullMeshCost.ToString("F2");
+            LblMstCost.Text = mstCost.ToString("F2");
+            LblCostSaved.Text = (fullMeshCost - mstCost).ToString("F2");
 
             // Populate traversal choices with every network node.
             CmbTraversalStart.ItemsSource = _networkNodes;
@@ -424,11 +439,8 @@ public partial class NetworkTopologyView : UserControl
             }
             else
             {
-                _minimumSpanningTree ??=
-                    await _meshNetworkApiService
-                        .GetMinimumSpanningTreeAsync();
-
-                connections = _minimumSpanningTree;
+                connections = _minimumSpanningTree
+      ?? new List<MeshNetworkConnection>();
             }
 
             _topologyRenderer.Draw(

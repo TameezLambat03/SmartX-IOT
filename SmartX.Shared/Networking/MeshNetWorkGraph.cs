@@ -247,7 +247,7 @@ namespace SmartX.Shared.Networking
                     "Starting device cannot be empty.",
                     nameof(startDevice));
             }
-
+          
             startDevice = startDevice.Trim();
 
             if (!_adjacencyList.ContainsKey(startDevice))
@@ -259,7 +259,11 @@ namespace SmartX.Shared.Networking
 
             // Store the connections selected for the minimum spanning tree.
             List<(string DeviceA, string DeviceB, double Weight)> tree = new();
-
+            // An offline starting device cannot build a spanning tree.
+            if (_offlineDevices.Contains(startDevice))
+            {
+                return tree;
+            }
             // Track devices already included in the tree.
             HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase);
 
@@ -272,6 +276,10 @@ namespace SmartX.Shared.Networking
             // Add connections from the starting device to its neighbours.
             foreach (var neighbour in _adjacencyList[startDevice])
             {
+                if (_offlineDevices.Contains(neighbour.Key))
+                {
+                    continue;
+                }
                 candidates.Enqueue(
                     (startDevice, neighbour.Key, neighbour.Value),
                     neighbour.Value);
@@ -283,7 +291,9 @@ namespace SmartX.Shared.Networking
                 var edge = candidates.Dequeue();
 
                 // Skip connections leading to devices already in the tree.
-                if (visited.Contains(edge.To))
+                // Skip devices that are already visited or offline.
+                if (visited.Contains(edge.To) ||
+                    _offlineDevices.Contains(edge.To))
                 {
                     continue;
                 }
@@ -295,7 +305,8 @@ namespace SmartX.Shared.Networking
                 // Add candidate connections from the newly included device.
                 foreach (var neighbour in _adjacencyList[edge.To])
                 {
-                    if (!visited.Contains(neighbour.Key))
+                    if (!visited.Contains(neighbour.Key) &&
+    !_offlineDevices.Contains(neighbour.Key))
                     {
                         candidates.Enqueue(
                             (edge.To, neighbour.Key, neighbour.Value),

@@ -137,6 +137,68 @@
 
                     </ComboBox>
 
+
+                    <!-- Network Cost Comparison -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Style="{StaticResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="FULL MESH COST"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="10"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock x:Name="LblFullMeshCost"
+                                           Text="0"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Style="{StaticResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="MST COST"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="10"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock x:Name="LblMstCost"
+                                           Text="0"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#20C997"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                Style="{StaticResource MetricCardStyle}"
+                                Margin="0">
+                            <StackPanel>
+                                <TextBlock Text="COST SAVED"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="10"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock x:Name="LblCostSaved"
+                                           Text="0"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#20C997"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Network Diagram -->
                     <Border Background="#101418"
                             BorderBrush="{StaticResource BorderBrush}"
                             BorderThickness="1"
@@ -155,7 +217,6 @@
                         </ScrollViewer>
 
                     </Border>
-
                 </StackPanel>
             </Border>
             <!-- Network Failure Impact -->
