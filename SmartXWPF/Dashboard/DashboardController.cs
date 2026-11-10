@@ -312,6 +312,13 @@ public class DashboardController
             return false;
         }
 
+        // Environmental mock readings range from 40.0 to below 70.0.
+        if (value < 40.0f || value >= 70.0f)
+        {
+            Warn("Environmental readings must be between 40.0 and 69.99.");
+            return false;
+        }
+
         TelemetryPacket<float> packet =
             new TelemetryPacket<float>(
                 sensor.DeviceMacAddress,
@@ -359,9 +366,10 @@ public class DashboardController
             return false;
         }
 
-        if (value < 0)
+        // Power mock readings range from 200 to 1000 inclusive.
+        if (value < 200 || value > 1000)
         {
-            Warn("Power consumption cannot be negative.");
+            Warn("Power consumption must be between 200 and 1000.");
             return false;
         }
 
