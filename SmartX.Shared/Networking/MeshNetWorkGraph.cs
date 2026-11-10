@@ -10,6 +10,10 @@ namespace SmartX.Shared.Networking
         private readonly Dictionary<string, Dictionary<string, double>> _adjacencyList =
             new(StringComparer.OrdinalIgnoreCase);
 
+        // Stores devices that are currently offline.
+        private readonly HashSet<string> _offlineDevices =
+            new(StringComparer.OrdinalIgnoreCase);
+
         public void AddDevice(string deviceId)
         {
             if (string.IsNullOrWhiteSpace(deviceId)) // Check whether the ID is empty or whitespace.
@@ -70,6 +74,11 @@ namespace SmartX.Shared.Networking
                 throw new ArgumentException("Starting device does not exist.");
             }
 
+            // An offline device cannot be used as a starting point.
+            if (_offlineDevices.Contains(startDevice))
+            {
+                return new List<string>();
+            }
             Queue<string> queue = new(); // queues devices(stores) Follows FIFO.
             HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase); 
             List<string> traversalOrder = new(); // Stores the order in which devices are visited.
@@ -84,14 +93,92 @@ namespace SmartX.Shared.Networking
 
                 foreach (string neighbour in _adjacencyList[currentDevice].Keys) // Examine its neighbours.
                 {
-                    if (visited.Add(neighbour)) // Mark an unvisited neighbour as visited.
+                    // Only visit devices that are online.
+                    if (!_offlineDevices.Contains(neighbour) &&
+                        visited.Add(neighbour))
                     {
-                        queue.Enqueue(neighbour); // Add that neighbour to the queue.
+                        queue.Enqueue(neighbour);
                     }
                 }
             }
 
             return traversalOrder; // Return the order in which devices were explored.
+        }
+        // Changes whether an existing device is online or offline.
+        
+        public void SetDeviceOnline(string deviceId, bool isOnline)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId))
+            {
+                throw new ArgumentException(
+                    "Device ID cannot be empty.",
+                    nameof(deviceId));
+            }
+
+            deviceId = deviceId.Trim();
+
+            if (!_adjacencyList.ContainsKey(deviceId))
+            {
+                throw new ArgumentException(
+                    "Device does not exist.",
+                    nameof(deviceId));
+            }
+
+            if (isOnline)
+            {
+                _offlineDevices.Remove(deviceId);
+            }
+            else
+            {
+                _offlineDevices.Add(deviceId);
+            }
+        }
+        //identify unreachable devcices
+        //unreachable devices, can still be online
+        public List<string> GetUnreachableDevices(string startDevice)
+        {
+            List<string> reachableDevices =
+                BreadthFirstSearch(startDevice);
+
+            HashSet<string> reachable =
+                new(reachableDevices, StringComparer.OrdinalIgnoreCase);
+
+            List<string> unreachable = new();
+
+            foreach (string device in _adjacencyList.Keys)
+            {
+                // Ignore devices that are explicitly offline.
+                if (_offlineDevices.Contains(device))
+                {
+                    continue;
+                }
+
+                // Include online devices that cannot reach the starting device.
+                if (!reachable.Contains(device))
+                {
+                    unreachable.Add(device);
+                }
+            }
+
+            return unreachable;
+        }
+
+        // Checks whether a device is online.
+        public bool IsDeviceOnline(string deviceId)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId) ||
+                !_adjacencyList.ContainsKey(deviceId))
+            {
+                return false;
+            }
+
+            return !_offlineDevices.Contains(deviceId);
+        }
+
+        // Returns all devices currently marked offline.
+        public List<string> GetOfflineDevices()
+        {
+            return new List<string>(_offlineDevices);
         }
 
         // DFS 
@@ -115,6 +202,10 @@ namespace SmartX.Shared.Networking
                     nameof(startDevice));
             }
 
+            if (_offlineDevices.Contains(startDevice))
+            {
+                return new List<string>();
+            }
             Stack<string> stack = new(); // Stores devices waiting to be explored.
             HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase); // Tracks visited devices.
             List<string> traversalOrder = new(); // Records the order devices are visited.
@@ -125,7 +216,7 @@ namespace SmartX.Shared.Networking
             {
                 string currentDevice = stack.Pop(); // Take the most recently added device.
 
-                if (!visited.Add(currentDevice)) // Skip devices already visited.
+                if (traversalOrder.Contains(currentDevice))
                 {
                     continue;
                 }
@@ -134,9 +225,11 @@ namespace SmartX.Shared.Networking
 
                 foreach (string neighbour in _adjacencyList[currentDevice].Keys) // Examine connected neighbours.
                 {
-                    if (!visited.Contains(neighbour)) // Ignore neighbours already explored.
+                    // Only visit devices that are online.
+                    if (!_offlineDevices.Contains(neighbour) &&
+                        visited.Add(neighbour))
                     {
-                        stack.Push(neighbour); // Schedule the neighbour for exploration.
+                        stack.Push(neighbour);
                     }
                 }
             }

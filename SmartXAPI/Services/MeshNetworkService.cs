@@ -208,6 +208,7 @@ public class MeshNetworkService
         AddConnection("ACTUATOR-SIM-02", "POWER-SIM-03", 5);
         AddConnection("ACTUATOR-SIM-03", "ENV-SIM-03", 4);
 
+        
         // Mark the network as configured.
         _isConfigured = true;
     }
@@ -285,4 +286,41 @@ public class MeshNetworkService
         // Explore the network by following each branch as deeply as possible.
         return _graph.DepthFirstSearch(startDevice);
     }
+
+    public void SetDeviceOnline(string deviceId, bool isOnline)
+    {
+        // Update the graph's device availability.
+        _graph.SetDeviceOnline(deviceId, isOnline);
+
+        // Update the corresponding node returned by the topology API.
+        MeshNetworkNode? node = _nodes.FirstOrDefault(
+            n => n.Id.Equals(
+                deviceId,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (node != null)
+        {
+            node.IsOnline = isOnline;
+        }
+    }
+
+    // Checks whether a device is currently online.
+    public bool IsDeviceOnline(string deviceId)
+    {
+        return _graph.IsDeviceOnline(deviceId);
+    }
+
+    // Returns devices that are explicitly offline.
+    public List<string> GetOfflineDevices()
+    {
+        return _graph.GetOfflineDevices();
+    }
+
+    // Returns online devices that cannot currently be reached from the gateway.
+
+    public List<string> GetUnreachableDevices()
+    {
+        return _graph.GetUnreachableDevices(GatewayId);
+    }
+
 }

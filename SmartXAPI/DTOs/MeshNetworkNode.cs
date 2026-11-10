@@ -1,10 +1,16 @@
 namespace SmartXAPI.DTOs;
 
-public sealed class MeshNetworkConnection
+
+public sealed class MeshNetworkNode
 {
-    public string DeviceA { get; init; } = "";
+    public string Id { get; init; } = "";
 
-    public string DeviceB { get; init; } = "";
+    public string Label { get; init; } = "";
 
-    public double Weight { get; init; }
+    public bool IsGateway { get; init; }
+
+    public string? Category { get; init; }
+
+    public string? DeploymentLocation { get; init; }
+    public bool IsOnline { get; set; } = true;
 }
