@@ -1213,6 +1213,46 @@ The `AttachmentEncryptionKey` setting is used by the API's AES-GCM encryption se
 - Keep the same key between application restarts. Existing encrypted attachments cannot be decrypted using a newly generated key.
 - If the key is lost or changed, previously encrypted attachments may become inaccessible.
 
+## Running Smart-X
+
+### Prerequisites
+- Visual Studio 2022 or later.
+- .NET 10 SDK.
+- A valid application configuration file (`appsettings.json`).
+- The required API configuration and security key.
+
+### Startup Configuration
+
+Smart-X consists of two applications that must run together:
+
+| Project | Startup action |
+|---|---|
+| SmartXAPI | Start |
+| SmartXWPF | Start |
+| SmartX.Shared | None |
+| SmartX.Tests | None |
+
+[!Start Up project structure](screenshots/startup.png)
+
+
+### Configure Multiple Startup Projects
+
+1. Open `SmartX.sln` in Visual Studio.
+2. Right-click the solution in Solution Explorer and select **Properties**.
+3. Navigate to **Startup Project**.
+4. Select **Multiple startup projects**.
+5. Configure the projects according to the table above.
+6. Click **Apply**, then **OK**.
+
+### Running the Application
+
+1. Ensure the API configuration file and required security key have been configured.
+2. Start the solution using the green Run button in Visual Studio.
+3. Visual Studio will launch both the ASP.NET Core API and the WPF desktop application.
+4. The WPF application communicates with the API through the configured local API address.
+
+**Note:** `SmartX.Shared` is a shared class library and `SmartX.Tests` is a test project. Neither needs to be launched as an application.
+
 **WPF configuration**
 
 The WPF application reads its API address through the `ApiBaseUrl` application setting.
