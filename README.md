@@ -1232,7 +1232,7 @@ Smart-X consists of two applications that must run together:
 | SmartX.Shared | None |
 | SmartX.Tests | None |
 
-[!Start Up project structure](screenshots/startup.png)
+![Visual Studio Multiple Startup Projects configuration](screenshots/startup.png)
 
 
 ### Configure Multiple Startup Projects
