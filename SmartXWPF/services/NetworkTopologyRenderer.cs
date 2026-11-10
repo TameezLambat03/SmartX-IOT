@@ -301,7 +301,7 @@ public class NetworkTopologyRenderer
 
         TextBlock label = new()
         {
-            Text = node.Label,
+            Text = node.Id,
             Foreground = !node.IsOnline
     ? Brushes.IndianRed
     : disconnected

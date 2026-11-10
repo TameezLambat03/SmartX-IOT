@@ -525,13 +525,17 @@ app.MapGet("/api/network/topology",
     {
         return Results.Ok(meshService.GetTopology());
     });
-// Returns all devices reachable from the gateway using BFS.
+// Returns devices reachable from the selected starting device using BFS.
 app.MapGet("/api/network/reachable",
-    (MeshNetworkService meshService) =>
+    (string? startDevice, MeshNetworkService meshService) =>
     {
+        string startingDevice =
+            string.IsNullOrWhiteSpace(startDevice)
+                ? MeshNetworkService.GatewayId
+                : startDevice;
+
         List<string> reachableDevices =
-            meshService.GetBreadthFirstTraversal(
-                MeshNetworkService.GatewayId);
+            meshService.GetBreadthFirstTraversal(startingDevice);
 
         return Results.Ok(reachableDevices);
     });

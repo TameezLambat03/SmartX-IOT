@@ -37,6 +37,10 @@ The network topology component models IoT devices as a weighted, undirected grap
 
 ## 1. Project Overview
 
+
+## Youtube video demo
+https://youtu.be/Nde7VZvPCMs 
+
 Smart-X provides a centralised environment for monitoring and managing connected IoT devices.
 
 The system supports three sensor categories:
