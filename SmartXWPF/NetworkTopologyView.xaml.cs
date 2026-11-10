@@ -126,6 +126,10 @@ public partial class NetworkTopologyView : UserControl
 
             // Populate traversal choices with every network node.
             CmbTraversalStart.ItemsSource = _networkNodes;
+            // Populate device management choices.
+            CmbDeviceManagement.ItemsSource = _networkNodes;
+
+            CmbDeviceManagement.SelectedIndex = -1;
 
             CmbTraversalStart.SelectedItem =
                 _networkNodes.FirstOrDefault(node => node.IsGateway);
@@ -431,5 +435,77 @@ public partial class NetworkTopologyView : UserControl
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+
     }
+    // Display the selected device's current availability.
+    private void CmbDeviceManagement_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (CmbDeviceManagement.SelectedItem is not MeshNetworkNode device)
+        {
+            LblDeviceStatus.Text =
+                "Select a device to view its status.";
+
+            BtnToggleDeviceStatus.IsEnabled = false;
+            return;
+        }
+
+        LblDeviceStatus.Text =
+            $"Device status: {(device.IsOnline ? "ONLINE" : "OFFLINE")}";
+
+        BtnToggleDeviceStatus.Content =
+            device.IsOnline
+                ? "Take Device Offline"
+                : "Bring Device Online";
+
+        BtnToggleDeviceStatus.IsEnabled = true;
+    }
+    // Switches the selected device between online and offline.
+    private async void BtnToggleDeviceStatus_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CmbDeviceManagement.SelectedItem is not MeshNetworkNode device)
+        {
+            return;
+        }
+
+        BtnToggleDeviceStatus.IsEnabled = false;
+        LblDeviceManagementResult.Text = "Updating device status...";
+
+        try
+        {
+            bool newStatus = !device.IsOnline;
+
+            await _meshNetworkApiService.SetDeviceOnlineAsync(
+                device.Id,
+                newStatus);
+
+            // Reload the topology to retrieve the updated device status.
+            await LoadTopologyAsync();
+
+            // Restore the selected device after refreshing the topology.
+            MeshNetworkNode? updatedDevice = _networkNodes.FirstOrDefault(
+                node => node.Id.Equals(
+                    device.Id,
+                    StringComparison.OrdinalIgnoreCase));
+
+            CmbDeviceManagement.SelectedItem = updatedDevice;
+
+            LblDeviceManagementResult.Text =
+                $"{device.Id} is now {(newStatus ? "ONLINE" : "OFFLINE")}.";
+
+        }
+        catch (Exception ex)
+        {
+            LblDeviceManagementResult.Text =
+                $"Could not update device status: {ex.Message}";
+        }
+        finally
+        {
+            BtnToggleDeviceStatus.IsEnabled = true;
+        }
+    }
+
 }

@@ -70,5 +70,17 @@ public async Task<List<string>> GetDepthFirstTraversalAsync(
     return devices ?? new List<string>();
 }
 
-   
+    // Updates whether a network device is online or offline.
+    public async Task SetDeviceOnlineAsync(
+        string deviceId,
+        bool isOnline)
+    {
+        string url =
+            $"api/network/devices/{Uri.EscapeDataString(deviceId)}/status?isOnline={isOnline.ToString().ToLowerInvariant()}";
+
+        using HttpResponseMessage response =
+            await _client.PutAsync(url, null);
+
+        response.EnsureSuccessStatusCode();
+    }
 }

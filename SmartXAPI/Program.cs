@@ -598,6 +598,30 @@ app.MapGet("/api/network/route",
         });
     });
 
+// Updates the online/offline status of a network device.
+app.MapPut("/api/network/devices/{deviceId}/status",
+    (string deviceId, bool isOnline, MeshNetworkService networkService) =>
+    {
+        try
+        {
+            networkService.SetDeviceOnline(deviceId, isOnline);
+
+            return Results.Ok(new
+            {
+                Message = $"Device {deviceId} is now {(isOnline ? "online" : "offline")}.",
+                DeviceId = deviceId,
+                IsOnline = isOnline
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new
+            {
+                Message = ex.Message
+            });
+        }
+    });
+
 // COMMAND EXECUTION
 
 app.MapPost(

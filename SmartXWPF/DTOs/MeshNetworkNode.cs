@@ -7,4 +7,5 @@ public class MeshNetworkNode
     public bool IsGateway { get; set; }
     public string? Category { get; set; }
     public string? DeploymentLocation { get; set; }
+    public bool IsOnline { get; set; } = true;
 }

@@ -63,6 +63,16 @@ public class NetworkTopologyRenderer
 
             foreach (string neighbour in adjacency[current])
             {
+                // Never traverse through an offline device.
+                MeshNetworkNode? neighbourNode =
+                    nodes.FirstOrDefault(node =>
+                        node.Id.Equals(
+                            neighbour,
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (neighbourNode == null || !neighbourNode.IsOnline)
+                    continue;
+
                 if (levels.ContainsKey(neighbour))
                     continue;
 
@@ -97,12 +107,20 @@ public class NetworkTopologyRenderer
             }
         }
 
-        // Place disconnected nodes in a separate bottom section.
-        List<MeshNetworkNode> disconnectedNodes = nodes
+        // Devices explicitly switched offline.
+        List<MeshNetworkNode> offlineNodes = nodes
+            .Where(node => !node.IsOnline)
+            .ToList();
+
+        // Online devices that have lost connectivity to the gateway.
+        List<MeshNetworkNode> unreachableNodes = nodes
             .Where(node =>
-                !node.IsGateway &&
+                node.IsOnline &&
                 !levels.ContainsKey(node.Id))
             .ToList();
+
+        List<MeshNetworkNode> disconnectedNodes =
+            offlineNodes.Concat(unreachableNodes).ToList();
 
         double offlineY = height - 90;
         double offlineSpacing = width / (disconnectedNodes.Count + 1);
@@ -138,7 +156,7 @@ public class NetworkTopologyRenderer
             }
         }
 
-        // Draw offline section.
+        // Draw offline and unreachable devices.
         if (disconnectedNodes.Count > 0)
         {
             TextBlock offlineHeading = new()
@@ -163,6 +181,7 @@ public class NetworkTopologyRenderer
             }
         }
     }
+    
 
     private void DrawConnection(
         Canvas canvas,
@@ -228,11 +247,17 @@ public class NetworkTopologyRenderer
             stroke = Brushes.White;
             icon = "GW";
         }
-        else if (disconnected)
+        else if (!node.IsOnline)
         {
             fill = new SolidColorBrush(Color.FromRgb(90, 45, 45));
             stroke = Brushes.IndianRed;
             icon = "OFF";
+        }
+        else if (disconnected)
+        {
+            fill = new SolidColorBrush(Color.FromRgb(100, 75, 30));
+            stroke = Brushes.Orange;
+            icon = "LOST";
         }
         else if (isRelay)
         {
@@ -277,9 +302,11 @@ public class NetworkTopologyRenderer
         TextBlock label = new()
         {
             Text = node.Label,
-            Foreground = disconnected
-                ? Brushes.IndianRed
-                : Brushes.White,
+            Foreground = !node.IsOnline
+    ? Brushes.IndianRed
+    : disconnected
+        ? Brushes.Orange
+        : Brushes.White,
             FontSize = 10,
             Width = 130,
             TextAlignment = TextAlignment.Center,
