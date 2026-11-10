@@ -1,0 +1,32 @@
+
+name: Smart-X Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore SmartX.Tests/SmartX.Tests.csproj
+
+      - name: Build and run unit tests
+        run: dotnet test SmartX.Tests/SmartX.Tests.csproj --configuration Release --no-restore

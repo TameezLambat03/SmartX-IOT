@@ -583,7 +583,7 @@ namespace SmartX.Tests
         {
             MeshNetWorkGraph graph = CreateTestGraph();
 
-            Assert.Throws<ArgumentException>(() =>
+            Assert.Throws<KeyNotFoundException>(() =>
                 graph.FindShortestPath(
                     "Unknown",
                     "Gateway"));
@@ -594,8 +594,8 @@ namespace SmartX.Tests
         {
             MeshNetWorkGraph graph = CreateTestGraph();
 
-            Assert.Throws<ArgumentException>(() =>
-                graph.FindShortestPath(
+            Assert.Throws<KeyNotFoundException>(() =>
+                  graph.FindShortestPath(
                     "Gateway",
                     "Unknown"));
         }
@@ -643,7 +643,7 @@ namespace SmartX.Tests
                         changed = true;
                     }
                 }
-
+                
                 if (!changed)
                     break;
             }
@@ -651,6 +651,30 @@ namespace SmartX.Tests
             return distances[destination];
         }
 
+
+        [Fact]
+        public void SetDeviceOnline_ShouldExcludeOfflineDeviceFromTraversalAndRouting()
+        {
+            MeshNetWorkGraph graph = CreateTestGraph();
+
+            graph.SetDeviceOnline("Sensor B", false);
+
+            Assert.False(graph.IsDeviceOnline("Sensor B"));
+
+            List<string> traversal =
+                graph.BreadthFirstSearch("Gateway");
+
+            Assert.DoesNotContain("Sensor B", traversal);
+
+            var route = graph.FindShortestPath(
+                "Gateway",
+                "Sensor B");
+
+            Assert.Empty(route.Path);
+            Assert.Equal(
+                double.PositiveInfinity,
+                route.TotalWeight);
+        }
 
 
     }
