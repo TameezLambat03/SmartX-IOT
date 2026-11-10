@@ -562,6 +562,15 @@ app.MapGet("/api/network/depth-first",
             });
         }
     });
+// Returns online devices that can no longer reach the gateway.
+app.MapGet("/api/network/unreachable",
+    (MeshNetworkService meshService) =>
+    {
+        List<string> unreachableDevices =
+            meshService.GetUnreachableDevices();
+
+        return Results.Ok(unreachableDevices);
+    });
 
 // Returns the minimum spanning tree calculated using Prim's algorithm.
 app.MapGet("/api/network/mst",

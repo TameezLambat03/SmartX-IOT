@@ -47,7 +47,9 @@ public class MeshNetworkApiService
     // Retrieve devices explored using Breadth-First Search.
 public async Task<List<string>> GetReachableDevicesAsync(
     string startDevice = "GATEWAY-01")
+
 {
+
     string url =
         $"api/network/reachable?startDevice={Uri.EscapeDataString(startDevice)}";
 
@@ -56,9 +58,17 @@ public async Task<List<string>> GetReachableDevicesAsync(
 
     return devices ?? new List<string>();
 }
+    // Retrieve online devices that cannot reach the gateway.
+    public async Task<List<string>> GetUnreachableDevicesAsync()
+    {
+        List<string>? devices =
+            await _client.GetFromJsonAsync<List<string>>(
+                "api/network/unreachable");
 
-// Retrieve devices explored using Depth-First Search.
-public async Task<List<string>> GetDepthFirstTraversalAsync(
+        return devices ?? new List<string>();
+    }
+    // Retrieve devices explored using Depth-First Search.
+    public async Task<List<string>> GetDepthFirstTraversalAsync(
     string startDevice)
 {
     string url =

@@ -331,13 +331,12 @@ namespace SmartX.Shared.Networking
 
             startDevice = startDevice.Trim();
             destinationDevice = destinationDevice.Trim();
-
-            // Check that both devices exist in the graph.
-            if (!_adjacencyList.ContainsKey(startDevice))
-                throw new ArgumentException("Starting device does not exist.");
-
-            if (!_adjacencyList.ContainsKey(destinationDevice))
-                throw new ArgumentException("Destination device does not exist.");
+            // An offline device cannot be used as a starting point or destination.
+            if (_offlineDevices.Contains(startDevice) ||
+                _offlineDevices.Contains(destinationDevice))
+            {
+                return (new List<string>(), double.PositiveInfinity);
+            }
 
             // Store the cheapest known cost to reach each device.
             Dictionary<string, double> distances =
@@ -388,6 +387,12 @@ namespace SmartX.Shared.Networking
                 // Examine every neighbour of the current device.
                 foreach (var neighbour in _adjacencyList[currentDevice])
                 {
+                    // Ignore devices that are currently offline.
+                    if (_offlineDevices.Contains(neighbour.Key))
+                    {
+                        continue;
+                    }
+
                     double newDistance =
                         distances[currentDevice] + neighbour.Value;
 

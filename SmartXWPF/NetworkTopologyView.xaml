@@ -158,6 +158,35 @@
 
                 </StackPanel>
             </Border>
+            <!-- Network Failure Impact -->
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+
+                    <TextBlock Text="Network Failure Impact"
+                   FontSize="16"
+                   FontWeight="SemiBold"/>
+
+                    <TextBlock Text="Online devices that can no longer reach the network gateway:"
+                   Foreground="{StaticResource MutedTextBrush}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,5,0,10"/>
+
+                    <Border Background="#101418"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12">
+
+                        <TextBlock x:Name="LblUnreachableDevices"
+                       Text="No unreachable devices detected."
+                       Foreground="#FFB454"
+                       TextWrapping="Wrap"/>
+
+                    </Border>
+
+                </StackPanel>
+            </Border>
 
             <!-- Device Management -->
             <Border Style="{StaticResource SectionCardStyle}">

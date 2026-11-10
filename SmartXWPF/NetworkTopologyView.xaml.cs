@@ -109,7 +109,16 @@ public partial class NetworkTopologyView : UserControl
 
             List<string> reachableDevices =
                 await _meshNetworkApiService.GetReachableDevicesAsync();
+            // Retrieve online devices that have been cut off from the gateway.
+            List<string> unreachableDevices =
+                await _meshNetworkApiService.GetUnreachableDevicesAsync();
 
+            // Display the names of affected devices.
+            LblUnreachableDevices.Text = unreachableDevices.Count == 0
+                ? "No online devices are currently cut off from the gateway."
+                : string.Join(
+                    Environment.NewLine,
+                    unreachableDevices.Select(device => $"• {device}"));
             HashSet<string> reachableSet =
                 new(reachableDevices, StringComparer.OrdinalIgnoreCase);
 
