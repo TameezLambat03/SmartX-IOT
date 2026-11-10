@@ -1,9 +1,12 @@
-﻿using Microsoft.Win32;
+﻿
+using Microsoft.Win32;
 using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
 using SmartXWPF.Services;
 using System;
+using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SmartXWPF.Dashboard;
@@ -51,7 +54,6 @@ public class DashboardController
         await RefreshSensorsAsync();
         await LoadHistoricalTelemetryAsync();
     }
-
 
     public async Task RefreshSensorsAsync()
     {
@@ -106,9 +108,7 @@ public class DashboardController
         }
     }
 
-
-    public void SelectSensor(
-        SensorProfile? sensor)
+    public void SelectSensor(SensorProfile? sensor)
     {
         if (sensor == null)
         {
@@ -126,24 +126,21 @@ public class DashboardController
             $"{sensor.DeploymentLocation}");
     }
 
-    public void UpdateCategoryControls(
-        int selectedIndex)
+    public void UpdateCategoryControls(int selectedIndex)
     {
         _view.UpdateCategoryControls(selectedIndex);
     }
-    public void ShowGraph(
-    SensorCategory category)
+
+    public void ShowGraph(SensorCategory category)
     {
         _chart.ShowHistory(category);
     }
 
+    // Register a sensor after validating the user's input.
     public async Task RegisterSensorAsync()
     {
-        string mac =
-            _view.GetMac();
-
-        string deployment =
-            _view.GetDeployment();
+        string mac = _view.GetMac().Trim();
+        string deployment = _view.GetDeployment().Trim();
 
         SensorCategory? category =
             _view.GetSelectedCategory();
@@ -154,9 +151,10 @@ public class DashboardController
             return;
         }
 
-        if (mac.Length > 17)
+        if (!IsValidMacAddress(mac))
         {
-            Warn("The MAC address cannot exceed 17 characters.");
+            Warn(
+                "Please enter a valid MAC address (e.g. 00:1B:44:11:3A:B7).");
             return;
         }
 
@@ -209,22 +207,16 @@ public class DashboardController
                 _view.Log(
                     $"[REGISTRATION REJECTED] Duplicate MAC address: {mac}");
 
-                System.Windows.MessageBox.Show(
-                    "A sensor with this MAC address is already registered.",
-                    "Registration Error",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
+                Warn(
+                    "A sensor with this MAC address is already registered.");
             }
             else
             {
                 _view.Log(
                     $"[REGISTRATION ERROR] HTTP {response.StatusCode}");
 
-                System.Windows.MessageBox.Show(
-                    $"The API rejected the registration.\nHTTP Status: {response.StatusCode}",
-                    "Registration Error",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Error);
+                Warn(
+                    $"The API rejected the registration.\nHTTP Status: {response.StatusCode}");
             }
         }
         catch
@@ -232,15 +224,11 @@ public class DashboardController
             _view.Log(
                 "[CONNECTION ERROR] Sensor registration failed.");
 
-            System.Windows.MessageBox.Show(
-                "Could not connect to the Smart-X API.",
-                "Connection Error",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
+            Warn("Could not connect to the Smart-X API.");
         }
     }
 
-    //sensory telemetry
+    // Submit telemetry for the currently selected sensor.
     public async Task SubmitTelemetryAsync()
     {
         SensorProfile? sensor =
@@ -255,8 +243,7 @@ public class DashboardController
         try
         {
             bool success;
-            //determiens what type of telemetry it is
-            //sends to the related method
+
             switch (sensor.Category)
             {
                 case SensorCategory.Environmental:
@@ -311,11 +298,17 @@ public class DashboardController
         string raw =
             _view.GetTelemetryValue();
 
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            Warn("Please enter an environmental reading.");
+            return false;
+        }
+
         if (!float.TryParse(raw, out float value) ||
             float.IsNaN(value) ||
             float.IsInfinity(value))
         {
-            Warn("Please enter a valid environmental value.");
+            Warn("Please enter a valid finite environmental number.");
             return false;
         }
 
@@ -354,9 +347,21 @@ public class DashboardController
         string raw =
             _view.GetTelemetryValue();
 
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            Warn("Please enter a power consumption value.");
+            return false;
+        }
+
         if (!int.TryParse(raw, out int value))
         {
-            Warn("Please enter a valid power value.");
+            Warn("Please enter a valid whole-number power value.");
+            return false;
+        }
+
+        if (value < 0)
+        {
+            Warn("Power consumption cannot be negative.");
             return false;
         }
 
@@ -712,7 +717,7 @@ public class DashboardController
     }
 
     private void HandleTelemetryError(
-      System.Net.Http.HttpResponseMessage response)
+        System.Net.Http.HttpResponseMessage response)
     {
         _view.Log(
             $"[API ERROR] HTTP {response.StatusCode} received from gateway.");
@@ -726,6 +731,15 @@ public class DashboardController
             System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Warning);
     }
+
+    // Validate the standard colon-separated MAC address format.
+    private bool IsValidMacAddress(string mac)
+    {
+        return Regex.IsMatch(
+            mac,
+            @"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$");
+    }
+
     private async Task LoadHistoricalTelemetryAsync()
     {
         try
