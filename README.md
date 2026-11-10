@@ -258,13 +258,9 @@ Generic collections improve code reuse, maintainability and type safety.
 
 Telemetry ingestion uses queues to temporarily store incoming sensor readings before they are processed.
 
-A queue follows the First In, First Out (FIFO) principle.
+A queue follows the First In, First Out (FIFO) principle. The first reading added to the queue is the first reading removed for processing.
 
-The first reading added to the queue is the first reading removed for processing.
-
-The telemetry queue processor periodically checks the queues and processes readings in batches of five.
-
-Separate queues are maintained for the different telemetry categories.
+The telemetry queue processor periodically checks the queues and processes readings in batches of five. Separate queues are maintained for the different telemetry categories.
 
 This prevents incoming readings from having to be processed immediately when received and provides a controlled ingestion process.
 
@@ -274,7 +270,6 @@ This prevents incoming readings from having to be processed immediately when rec
 |---|---|
 | Enqueue | O(1) |
 | Dequeue | O(1) |
-| Peek | O(1) |
 
 ### 5.3 AVL Tree — Historical Telemetry
 
@@ -296,7 +291,7 @@ This allows historical telemetry to be organised chronologically while avoiding 
 
 A standard unbalanced BST can become inefficient if data is inserted in an already sorted order.
 
-For example, inserting timestamps in chronological order could produce a tree resembling a linked list.
+For example, inserting timestamps in chronological order could produce a tree resembling a linked list. Searching and inserting could then degrade from O(log n) to O(n).
 
 An AVL tree prevents this by maintaining a balance factor for each node.
 
@@ -318,6 +313,28 @@ The implementation supports four rotation cases:
 - Left-Right
 - Right-Left
 
+These rotations restructure the affected nodes while preserving the chronological ordering of the tree.
+
+For example, a right rotation moves the left child into the parent position and makes the previous parent its right child:
+
+```csharp
+private static Node RotateRight(Node pivot)
+{
+    Node newRoot = pivot.Left!;
+    Node? transferredSubtree = newRoot.Right;
+
+    newRoot.Right = pivot;
+    pivot.Left = transferredSubtree;
+
+    UpdateHeight(pivot);
+    UpdateHeight(newRoot);
+
+    return newRoot;
+}
+```
+
+After the rotation, the affected node heights are recalculated so that the balance of the tree can be maintained.
+
 #### Insertion
 
 The `Insert()` method adds a telemetry packet and recursively locates the correct timestamp position.
@@ -333,6 +350,12 @@ public void Insert(TelemetryPacket<T> packet)
     Count++;
 }
 ```
+
+The recursive `InsertNode()` method compares the packet timestamp against existing nodes to determine whether it belongs in the left or right subtree.
+
+If a packet has the same timestamp as an existing node, it is added to that node's packet collection instead of creating another node.
+
+This prevents unnecessary duplicate timestamp nodes while preserving all telemetry readings.
 
 #### Historical range queries
 
@@ -351,21 +374,23 @@ Rather than visiting every node, the recursive query uses timestamp ordering to 
 
 For example:
 
-- If a node's timestamp is earlier than the requested start, its left subtree cannot contain matching timestamps.
 - If a node's timestamp is later than the requested end, its right subtree cannot contain matching timestamps.
+- If a node's timestamp is earlier than the requested start, its left subtree cannot contain matching timestamps.
 
-This reduces unnecessary traversal.
+The query also supports case-insensitive MAC address filtering, allowing readings from a specific device to be retrieved without changing the underlying tree structure.
 
 **Efficiency:**
 
 | Operation | Complexity |
 |---|---|
-| Search | O(log n) |
 | Insert | O(log n) |
+| Timestamp lookup | O(log n) |
 | Range query | O(log n + k) |
-| Storage | O(n) |
+| Storage | O(n) timestamp nodes, plus stored packets |
 
-Here, `n` represents the number of timestamp nodes and `k` represents the number of matching packets returned. The range-query complexity assumes the tree is balanced and excludes the cost of filtering packets stored at matching timestamps.
+Here, `n` represents the number of unique timestamp nodes and `k` represents the number of matching telemetry packets returned.
+
+The range-query complexity assumes the tree is balanced and that the traversal can prune irrelevant subtrees. It also excludes the cost of filtering packets stored at matching timestamps.
 
 The AVL tree therefore provides predictable performance as historical telemetry grows.
 
@@ -397,23 +422,25 @@ For example:
 
 ```text
 Gateway
-  |
-  +---- Sensor A (5)
-  |
-  +---- Sensor B (8)
+   |
+   +---- Sensor A (5)
+   |
+   +---- Sensor B (8)
 
 Sensor A
-  |
-  +---- Sensor B (2)
-  |
-  +---- Sensor C (6)
+   |
+   +---- Sensor B (2)
+   |
+   +---- Sensor C (6)
 ```
 
 The graph uses an adjacency list instead of an adjacency matrix.
 
-An adjacency matrix requires O(V²) storage, even when relatively few devices are connected.
+An adjacency matrix requires O(V²) storage because it maintains a possible connection entry for every pair of vertices, even when relatively few devices are connected.
 
-An adjacency list requires O(V + E) storage, making it more suitable for a network where each device only connects to selected neighbouring devices.
+An adjacency list requires O(V + E) storage because it only stores the devices and their existing connections.
+
+This makes it more suitable for a network where each device connects to selected neighbouring devices rather than every device in the network.
 
 Where:
 
@@ -432,6 +459,19 @@ _adjacencyList[deviceB][deviceA] = weight;
 Connection weights are validated to reject negative, infinite and invalid numerical values.
 
 The graph uses a case-insensitive identifier comparer, allowing device identifiers to be resolved regardless of letter casing.
+
+#### Device availability
+
+The graph maintains a separate HashSet containing devices that are currently offline.
+
+```csharp
+private readonly HashSet<string> _offlineDevices =
+    new(StringComparer.OrdinalIgnoreCase);
+```
+
+This allows the application to retain the network's original connections while excluding unavailable devices from traversal, routing and MST calculations.
+
+A device can therefore be marked offline without deleting its connections from the graph. If it becomes available again, it can be returned to the active network.
 
 ### 5.5 Breadth-First Search (BFS)
 
@@ -492,7 +532,9 @@ stack.Push(startDevice);
 
 The algorithm removes the most recently added device from the stack and examines its neighbours.
 
-**Time complexity:** O(V + E)
+The visited collection prevents devices from being added repeatedly during exploration.
+
+**Time complexity:** O(V² + E) worst case for this implementation, because it also checks `traversalOrder.Contains()` when processing devices. A conventional DFS using only a visited HashSet would achieve O(V + E).
 
 **Purpose in Smart-X:**
 
@@ -500,9 +542,7 @@ The algorithm removes the most recently added device from the stack and examines
 - Demonstrate an alternative graph traversal strategy.
 - Compare depth-first and breadth-first exploration.
 
-Both BFS and DFS avoid revisiting devices by tracking visited identifiers.
-
-Both algorithms also exclude devices marked as offline.
+Both BFS and DFS exclude devices marked as offline.
 
 ### 5.7 Dijkstra's Shortest-Path Algorithm
 
@@ -539,7 +579,9 @@ After reaching the destination, the algorithm follows the previous-device refere
 
 The resulting path is reversed so that it runs from the starting device to the destination.
 
-**Time complexity:** Approximately O((V + E) log V) with a priority queue for the usual adjacency-list implementation.
+Offline devices are excluded during neighbour evaluation. If the destination cannot be reached, the method returns an empty path and an infinite total weight.
+
+**Time complexity:** Approximately O((V + E) log V) with a priority queue and adjacency-list representation.
 
 **Purpose in Smart-X:**
 
@@ -614,7 +656,48 @@ Smart-X also uses several additional data structures throughout the application.
 
 The application also demonstrates generic methods, operator overloading, recursive operations and custom collection implementations.
 
----
+### 5.10 Performance and Scalability Analysis
+
+The selected data structures allow Smart-X to manage increasing amounts of telemetry data and network devices without relying on inefficient linear searches or unnecessary storage.
+
+**Telemetry scalability**
+
+As the number of telemetry readings increases, the AVL tree maintains logarithmic insertion performance by automatically balancing itself.
+
+For example, inserting 1,000 unique timestamp nodes into a balanced AVL tree requires approximately logarithmic search and insertion work rather than potentially examining all 1,000 nodes.
+
+Historical range queries also benefit from timestamp ordering. Instead of examining every stored record, the tree can skip entire subtrees that fall outside the requested date range.
+
+This becomes increasingly useful as historical telemetry accumulates over time.
+
+**Network scalability**
+
+The adjacency list stores only existing network connections.
+
+For example, a network containing 100 devices does not require a 100 × 100 adjacency matrix to represent its connections. The adjacency list stores the 100 device entries and their actual neighbouring connections.
+
+As devices and connections increase:
+
+- BFS and DFS examine the reachable vertices and edges.
+- Dijkstra processes candidate routes using a priority queue.
+- Prim's algorithm evaluates candidate connections to construct a minimum spanning tree.
+- The graph's storage increases proportionally to the number of devices and connections.
+
+**Complexity comparison**
+
+| Structure / Algorithm | Time or Space Complexity | Scalability benefit |
+|---|---|---|
+| AVL Tree insertion | O(log n) | Maintains efficient insertion as telemetry grows. |
+| AVL Tree range query | O(log n + k) | Avoids scanning unrelated timestamp ranges. |
+| Adjacency list storage | O(V + E) | Stores only existing network connections. |
+| BFS | O(V + E) | Traverses reachable network devices and connections. |
+| DFS | O(V² + E) worst case in this implementation | Explores network branches, with an additional visited-order check. |
+| Dijkstra | O((V + E) log V) | Finds efficient routes through weighted connections. |
+| Prim's MST | O(E log V) | Constructs a minimum-cost connected structure. |
+
+The complexities demonstrate why these structures are appropriate for Smart-X. The AVL tree maintains efficient historical telemetry operations, while the graph supports network traversal, routing and connection-cost optimisation as the IoT environment expands.
+
+**Note:** These are algorithmic complexity estimates, not measured benchmark results. Actual execution time also depends on hardware, data distribution and the number of matching records or connections.
 
 ## 6. Network Topology and Mesh Routing
 
@@ -628,7 +711,9 @@ The backend constructs a simulated mesh network containing:
 - Additional simulated sensor devices.
 - A disconnected test device (`TEST-UNREACHABLE-01`).
 
-### Network service
+The network is represented as a weighted, undirected graph. Devices are represented as vertices, while connections between devices are represented as edges. Each edge has a weight representing its connection cost.
+
+### 6.1 Network Service
 
 **Implementation:** `SmartXAPI/Services/MeshNetworkService.cs`
 
@@ -637,20 +722,136 @@ The `MeshNetworkService` is responsible for configuring the simulated network an
 It creates the graph, registers nodes and connections, and provides methods for:
 
 - Retrieving the topology.
-- Calculating the MST.
+- Calculating the Minimum Spanning Tree (MST).
 - Finding shortest routes.
 - Running BFS and DFS.
 - Updating device availability.
 - Retrieving offline devices.
 - Identifying unreachable devices.
 
-### Network visualisation
+The service first locates the required registered sensor categories. It then registers the gateway and sensors before adding the simulated relay and sensor devices.
 
-**Implementation:** `SmartXWPF/NetworkTopologyView.xaml` and `NetworkTopologyView.xaml.cs`
+**Example: Registering the gateway and disconnected test device**
+
+```csharp
+_graph.AddDevice(GatewayId);
+
+_nodes.Add(new MeshNetworkNode
+{
+    Id = GatewayId,
+    Label = "Central Gateway",
+    IsGateway = true
+});
+
+const string disconnectedDeviceId = "TEST-UNREACHABLE-01";
+
+_graph.AddDevice(disconnectedDeviceId);
+
+_nodes.Add(new MeshNetworkNode
+{
+    Id = disconnectedDeviceId,
+    Label = "Disconnected Test Node",
+    IsGateway = false,
+    Category = "Test",
+    DeploymentLocation = "Simulation"
+});
+```
+
+The disconnected test device is deliberately added to the graph without any edges. This allows the application to demonstrate how graph traversal identifies devices that cannot be reached from the gateway.
+
+**Example: Adding weighted connections**
+
+```csharp
+private void AddConnection(
+    string deviceA,
+    string deviceB,
+    double weight)
+{
+    _graph.AddConnection(deviceA, deviceB, weight);
+
+    _connections.Add(new MeshNetworkConnection
+    {
+        DeviceA = deviceA,
+        DeviceB = deviceB,
+        Weight = weight
+    });
+}
+```
+
+Each connection is added to the shared graph and stored as a DTO for the API response. The graph manages the bidirectional relationship, while the DTO provides the information required by the WPF application.
+
+### 6.2 Exposing Graph Algorithms Through the API
+
+The service provides methods that delegate graph operations to `MeshNetWorkGraph`.
+
+**Example: Minimum Spanning Tree and shortest-path operations**
+
+```csharp
+public List<MeshNetworkConnection> GetMinimumSpanningTree()
+{
+    var spanningTree = _graph.MinimumSpanningTree(GatewayId);
+
+    return spanningTree.Select(connection =>
+        new MeshNetworkConnection
+        {
+            DeviceA = connection.DeviceA,
+            DeviceB = connection.DeviceB,
+            Weight = connection.Weight
+        }).ToList();
+}
+
+public (List<string> Path, double TotalWeight) FindShortestPath(
+    string startDevice,
+    string destinationDevice)
+{
+    return _graph.FindShortestPath(
+        startDevice,
+        destinationDevice);
+}
+```
+
+The MST operation uses Prim's algorithm, starting from the gateway. The shortest-path operation uses Dijkstra's algorithm to determine the lowest-cost route between two devices.
+
+The service also exposes BFS and DFS operations, allowing the WPF application to request network traversal without directly accessing the graph implementation.
+
+### 6.3 Network Visualisation
+
+**Implementation:**
+- `SmartXWPF/NetworkTopologyView.xaml`
+- `SmartXWPF/NetworkTopologyView.xaml.cs`
+- `SmartXWPF/services/NetworkTopologyRenderer.cs`
 
 The WPF view retrieves the topology through `MeshNetworkApiService` and uses `NetworkTopologyRenderer` to draw the network on a Canvas.
 
-The interface provides:
+When the view loads, it retrieves the network topology, reachable devices, unreachable devices and minimum spanning tree asynchronously.
+
+**Example: Loading the topology and calculating network costs**
+
+```csharp
+MeshNetworkTopology? topology =
+    await _meshNetworkApiService.GetTopologyAsync();
+
+if (topology == null)
+    return;
+
+_networkNodes = topology.Nodes;
+_networkConnections = topology.Connections;
+
+double fullMeshCost = _networkConnections.Sum(
+    connection => connection.Weight);
+
+_minimumSpanningTree =
+    await _meshNetworkApiService.GetMinimumSpanningTreeAsync();
+
+double mstCost = _minimumSpanningTree.Sum(
+    connection => connection.Weight);
+
+LblFullMeshCost.Text = fullMeshCost.ToString("F2");
+LblMstCost.Text = mstCost.ToString("F2");
+LblCostSaved.Text = (fullMeshCost - mstCost).ToString("F2");
+```
+
+The dashboard displays the following information:
 
 **Network summary**
 
@@ -660,8 +861,8 @@ The interface provides:
 
 **Topology modes**
 
-- Full Mesh: displays the configured network connections.
-- Minimum Spanning Tree: displays the connections selected by Prim's algorithm.
+- **Full Mesh:** Displays the configured network connections.
+- **Minimum Spanning Tree:** Displays the connections selected by Prim's algorithm.
 
 **Connection cost comparison**
 
@@ -671,42 +872,156 @@ The dashboard displays:
 - MST Cost.
 - Cost Saved.
 
-The values are calculated by summing the weights of the configured connections and the MST connections.
+The full mesh cost is calculated by summing the weights of all configured connections. The MST cost is calculated by summing the weights selected for the spanning tree.
+
+The difference represents the connection weight saved by using the MST instead of all configured connections. This is a comparison of the configured network and its gateway-connected spanning tree, rather than a calculation of every possible connection in a complete graph.
+
+### 6.4 Topology Rendering and BFS-Based Layout
+
+**Implementation:** `SmartXWPF/services/NetworkTopologyRenderer.cs`
+
+The renderer converts the topology data into a visual network diagram.
+
+It first creates an adjacency structure from the connections supplied to the renderer. It then performs BFS from the gateway to determine the hop level of each reachable online device.
+
+**Example: Determining device levels**
 
 ```csharp
-double fullMeshCost = _networkConnections.Sum(
-    connection => connection.Weight);
+levels[gateway.Id] = 0;
+queue.Enqueue(gateway.Id);
 
-double mstCost = _minimumSpanningTree.Sum(
-    connection => connection.Weight);
+while (queue.Count > 0)
+{
+    string current = queue.Dequeue();
 
-LblCostSaved.Text =
-    (fullMeshCost - mstCost).ToString("F2");
+    foreach (string neighbour in adjacency[current])
+    {
+        MeshNetworkNode? neighbourNode =
+            nodes.FirstOrDefault(node =>
+                node.Id.Equals(
+                    neighbour,
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (neighbourNode == null || !neighbourNode.IsOnline)
+            continue;
+
+        if (levels.ContainsKey(neighbour))
+            continue;
+
+        levels[neighbour] = levels[current] + 1;
+        queue.Enqueue(neighbour);
+    }
+}
 ```
 
-**Network traversal**
+The gateway is assigned level zero. Each reachable device is assigned a level based on the number of connections from the gateway along the BFS traversal tree.
+
+The renderer uses these levels to position devices vertically on the Canvas. Devices at the same hop level are distributed horizontally.
+
+This creates a layered network diagram that makes the gateway's relationship with the surrounding devices easier to understand.
+
+Connections are drawn before the nodes so that the lines appear behind the device representations. Each connection also displays its weight.
+
+The renderer uses different visual styles to distinguish:
+
+- The central gateway.
+- Relay devices.
+- Normal sensors.
+- Offline devices.
+- Online but unreachable devices.
+
+### 6.5 Network Traversal
 
 Users can select a starting device and choose BFS or DFS to explore the network.
 
-**Sensor routing**
+The WPF application determines which traversal algorithm was selected and requests the corresponding result from the API.
+
+**Example: Selecting the traversal algorithm**
+
+```csharp
+bool useBfs = selectedAlgorithm.Content.ToString()!
+    .StartsWith("Breadth", StringComparison.OrdinalIgnoreCase);
+
+List<string> visitedDevices;
+
+if (useBfs)
+{
+    visitedDevices =
+        await _meshNetworkApiService.GetReachableDevicesAsync(
+            startNode.Id);
+}
+else
+{
+    visitedDevices =
+        await _meshNetworkApiService.GetDepthFirstTraversalAsync(
+            startNode.Id);
+}
+```
+
+The resulting device order is displayed in the dashboard, allowing users to compare level-by-level exploration with depth-first exploration.
+
+### 6.6 Sensor Routing
 
 Users can select a sensor and calculate its shortest route to the gateway using Dijkstra's algorithm.
 
-**Device management**
+The gateway, relay devices and disconnected test devices are excluded from the sensor selection list.
 
-Users can take a device offline or bring it online.
+**Example: Calculating a route to the gateway**
 
-**Network failure impact**
+```csharp
+MeshNetworkRoute? route =
+    await _meshNetworkApiService.GetShortestRouteAsync(
+        device.Id,
+        "GATEWAY-01");
 
-The dashboard identifies online devices that can no longer reach the gateway.
+if (route == null || route.Path.Count == 0)
+{
+    LblRouteResult.Text =
+        "No route to the gateway could be found.";
+    return;
+}
 
-### Offline and unreachable devices
+string routePath = string.Join(" → ", route.Path);
+
+LblRouteResult.Text =
+    $"Starting device: {device.Id}\n" +
+    $"Shortest route: {routePath}\n" +
+    $"Total route weight: {route.TotalWeight:0.##}";
+```
+
+The result displays the selected sensor, the calculated route and its total weight. If no valid route exists, the dashboard informs the user that the gateway cannot be reached.
+
+### 6.7 Device Management
+
+Users can take a device offline or bring it online through the device management controls.
+
+When the user changes a device's availability, the WPF application sends the update through `MeshNetworkApiService` and reloads the topology to retrieve the updated network state.
+
+At the backend, `MeshNetworkService` updates both the graph and the corresponding API node:
+
+```csharp
+_graph.SetDeviceOnline(deviceId, isOnline);
+
+MeshNetworkNode? node = _nodes.FirstOrDefault(
+    n => n.Id.Equals(
+        deviceId,
+        StringComparison.OrdinalIgnoreCase));
+
+if (node != null)
+{
+    node.IsOnline = isOnline;
+}
+```
+
+This keeps the graph's availability information and the node information returned to the frontend consistent.
+
+### 6.8 Offline and Unreachable Devices
 
 Smart-X distinguishes between an offline device and an unreachable device.
 
-An offline device has explicitly been marked as unavailable.
+An **offline device** has explicitly been marked as unavailable.
 
-An unreachable device may still be online, but it cannot be reached from the gateway through the currently available connections.
+An **unreachable device** may still be online, but it cannot be reached from the gateway through the currently available connections.
 
 The graph stores offline device identifiers in a `HashSet<string>`.
 
@@ -721,7 +1036,33 @@ The `GetUnreachableDevices()` method performs BFS from the gateway and identifie
 
 The simulated `TEST-UNREACHABLE-01` node demonstrates this behaviour because it is registered in the graph without any connections.
 
----
+The WPF renderer also independently calculates BFS levels for visual positioning. It separates explicitly offline devices from online devices that cannot be reached from the gateway and places both groups in a dedicated area of the diagram.
+
+This allows the dashboard to communicate network failures visually, rather than relying only on text-based status information.
+
+### 6.9 Performance and Scalability Considerations
+
+The topology feature uses graph algorithms selected for different network operations:
+
+| Operation | Algorithm | Time Complexity |
+|---|---|---|
+| Network traversal | BFS | O(V + E) |
+| Network traversal | DFS | O(V² + E) in the current implementation |
+| Shortest route | Dijkstra with priority queue | O((V + E) log V) |
+| Minimum spanning tree | Prim with priority queue | O(E log V) |
+
+Where:
+
+- `V` represents the number of devices (vertices).
+- `E` represents the number of connections (edges).
+
+BFS and DFS allow the application to explore connected devices without repeatedly examining every possible pair of devices. Dijkstra's algorithm provides weighted shortest routes, while Prim's algorithm identifies a minimum-weight spanning tree for the gateway-connected component.
+
+The graph uses an adjacency-list representation, allowing traversal to focus on existing connections rather than scanning a full vertex-to-vertex matrix.
+
+The renderer also uses BFS to arrange reachable devices into hop levels. This makes the topology easier to interpret as the number of connected devices increases.
+
+The current implementation is a simulated mesh network intended to demonstrate routing, traversal, availability and network-cost analysis. Its complexity characteristics describe the algorithms, rather than measured production performance. The WPF renderer also performs additional node lookups while calculating its layout, so its rendering cost includes work beyond the underlying BFS traversal.
 
 ## 7. Application Features
 
