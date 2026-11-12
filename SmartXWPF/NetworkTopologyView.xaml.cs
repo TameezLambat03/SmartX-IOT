@@ -91,8 +91,29 @@ public partial class NetworkTopologyView : UserControl
     }
 
     // Load all graph nodes and populate the routing selector.
+
     private async Task LoadTopologyAsync()
     {
+        // Capture the current dashboard state before replacing network nodes.
+        string? selectedTraversalId =
+            (CmbTraversalStart.SelectedItem as MeshNetworkNode)?.Id;
+
+        string? selectedManagementId =
+            (CmbDeviceManagement.SelectedItem as MeshNetworkNode)?.Id;
+
+        string? selectedRouteId =
+            (CmbRouteDevice.SelectedItem as MeshNetworkNode)?.Id;
+
+        int selectedAlgorithmIndex =
+            CmbTraversalAlgorithm.SelectedIndex;
+
+        int selectedTopologyMode =
+            CmbTopologyMode.SelectedIndex;
+
+        string traversalResult = LblTraversalResult.Text;
+        string routeResult = LblRouteResult.Text;
+        string managementResult = LblDeviceManagementResult.Text;
+
         try
         {
             MeshNetworkTopology? topology =
@@ -109,16 +130,16 @@ public partial class NetworkTopologyView : UserControl
 
             List<string> reachableDevices =
                 await _meshNetworkApiService.GetReachableDevicesAsync();
-            // Retrieve online devices that have been cut off from the gateway.
+
             List<string> unreachableDevices =
                 await _meshNetworkApiService.GetUnreachableDevicesAsync();
 
-            // Display the names of affected devices.
             LblUnreachableDevices.Text = unreachableDevices.Count == 0
                 ? "No online devices are currently cut off from the gateway."
                 : string.Join(
                     Environment.NewLine,
                     unreachableDevices.Select(device => $"• {device}"));
+
             HashSet<string> reachableSet =
                 new(reachableDevices, StringComparer.OrdinalIgnoreCase);
 
@@ -132,35 +153,52 @@ public partial class NetworkTopologyView : UserControl
 
             _networkNodes = topology.Nodes;
             _networkConnections = topology.Connections;
-            // Calculate the total cost of the full mesh.
+
+            // Recalculate the network costs.
             double fullMeshCost = _networkConnections.Sum(
                 connection => connection.Weight);
 
-            // Recalculate the minimum spanning tree.
             _minimumSpanningTree =
                 await _meshNetworkApiService.GetMinimumSpanningTreeAsync();
 
             double mstCost = _minimumSpanningTree.Sum(
                 connection => connection.Weight);
 
-            // Update the cost comparison cards.
             LblFullMeshCost.Text = fullMeshCost.ToString("F2");
             LblMstCost.Text = mstCost.ToString("F2");
-            LblCostSaved.Text = (fullMeshCost - mstCost).ToString("F2");
+            LblCostSaved.Text =
+                (fullMeshCost - mstCost).ToString("F2");
 
-            // Populate traversal choices with every network node.
-            CmbTraversalStart.ItemsSource = _networkNodes;
-            // Populate device management choices.
+            // Refresh device management choices.
             CmbDeviceManagement.ItemsSource = _networkNodes;
 
-            CmbDeviceManagement.SelectedIndex = -1;
+            // Refresh traversal choices.
+            CmbTraversalStart.ItemsSource = _networkNodes;
+
+            // Restore the previously selected traversal device.
+            MeshNetworkNode? traversalDevice =
+                _networkNodes.FirstOrDefault(node =>
+                    string.Equals(
+                        node.Id,
+                        selectedTraversalId,
+                        StringComparison.OrdinalIgnoreCase));
 
             CmbTraversalStart.SelectedItem =
+                traversalDevice ??
                 _networkNodes.FirstOrDefault(node => node.IsGateway);
 
-            // Populate routing choices from the network topology.
-            // Exclude the gateway, relays and disconnected test nodes.
-            CmbRouteDevice.ItemsSource = _networkNodes
+            // Restore the device-management selection.
+            MeshNetworkNode? managementDevice =
+                _networkNodes.FirstOrDefault(node =>
+                    string.Equals(
+                        node.Id,
+                        selectedManagementId,
+                        StringComparison.OrdinalIgnoreCase));
+
+            CmbDeviceManagement.SelectedItem = managementDevice;
+
+            // Restore route choices.
+            List<MeshNetworkNode> routeDevices = _networkNodes
                 .Where(node =>
                     !node.IsGateway &&
                     !string.Equals(
@@ -173,13 +211,44 @@ public partial class NetworkTopologyView : UserControl
                         StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            CmbRouteDevice.SelectedIndex = -1;
-            BtnFindRoute.IsEnabled = CmbRouteDevice.Items.Count > 0;
+            CmbRouteDevice.ItemsSource = routeDevices;
+
+            MeshNetworkNode? routeDevice =
+                routeDevices.FirstOrDefault(node =>
+                    string.Equals(
+                        node.Id,
+                        selectedRouteId,
+                        StringComparison.OrdinalIgnoreCase));
+
+            CmbRouteDevice.SelectedItem = routeDevice;
+
+            BtnFindRoute.IsEnabled = routeDevices.Count > 0;
+
+            // Preserve the selected algorithm and topology mode.
+            if (selectedAlgorithmIndex >= 0)
+                CmbTraversalAlgorithm.SelectedIndex =
+                    selectedAlgorithmIndex;
+
+            if (selectedTopologyMode >= 0)
+                CmbTopologyMode.SelectedIndex =
+                    selectedTopologyMode;
+
+            // Preserve previous results rather than clearing them.
+            LblTraversalResult.Text = traversalResult;
+            LblRouteResult.Text = routeResult;
+            LblDeviceManagementResult.Text = managementResult;
+
+            // Re-render using the currently selected topology mode.
+            List<MeshNetworkConnection> displayedConnections =
+                CmbTopologyMode.SelectedIndex == 1
+                    ? _minimumSpanningTree
+                        ?? new List<MeshNetworkConnection>()
+                    : _networkConnections;
 
             _topologyRenderer.Draw(
                 NetworkCanvas,
                 _networkNodes,
-                _networkConnections);
+                displayedConnections);
 
             LblHistoryStatus.Text =
                 $"Network loaded: {topology.Nodes.Count} nodes and " +
@@ -194,6 +263,7 @@ public partial class NetworkTopologyView : UserControl
                 MessageBoxImage.Error);
         }
     }
+
 
     // Calculate a Dijkstra shortest path from any selectable sensor node.
     private async void BtnFindRoute_Click(
@@ -496,7 +566,9 @@ public partial class NetworkTopologyView : UserControl
         LblDeviceManagementResult.Text = "Updating device status...";
 
         try
+
         {
+            string deviceId = device.Id;//save device before making api request
             bool newStatus = !device.IsOnline;
 
             await _meshNetworkApiService.SetDeviceOnlineAsync(
