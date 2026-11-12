@@ -132,8 +132,22 @@ public class NetworkTopologyRenderer
         }
 
         // Draw connections behind the nodes.
+        HashSet<string> drawnEdges = new();
+
         foreach (MeshNetworkConnection connection in connections)
         {
+            // 1. Ignore self-loops (e.g., B8 connected to B8)
+            if (string.Equals(connection.DeviceA, connection.DeviceB, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // 2. Ignore duplicate edges (A->B and B->A)
+            string edgeKey = string.Compare(connection.DeviceA, connection.DeviceB, StringComparison.OrdinalIgnoreCase) < 0
+                ? $"{connection.DeviceA}-{connection.DeviceB}"
+                : $"{connection.DeviceB}-{connection.DeviceA}";
+
+            if (!drawnEdges.Add(edgeKey))
+                continue;
+
             if (!positions.TryGetValue(connection.DeviceA, out Point start) ||
                 !positions.TryGetValue(connection.DeviceB, out Point end))
                 continue;
@@ -143,7 +157,8 @@ public class NetworkTopologyRenderer
                 !levels.ContainsKey(connection.DeviceB))
                 continue;
 
-            DrawConnection(canvas, start, end, connection.Weight);
+            // Pass the positions of all nodes so the renderer knows where the overlap hazards are
+            DrawConnection(canvas, start, end, connection.Weight, positions.Values.ToList());
         }
 
         // Draw connected nodes.
@@ -181,46 +196,46 @@ public class NetworkTopologyRenderer
             }
         }
     }
-    
 
-    private void DrawConnection(
-        Canvas canvas,
-        Point start,
-        Point end,
-        double weight)
+
+    private void DrawConnection(Canvas canvas, Point start, Point end, double weight, List<Point> allNodes)
     {
-        Line line = new()
-        {
-            X1 = start.X,
-            Y1 = start.Y,
-            X2 = end.X,
-            Y2 = end.Y,
-            Stroke = new SolidColorBrush(
-                Color.FromRgb(75, 105, 115)),
-            StrokeThickness = 2
-        };
+        if (start == end) return;
 
+        Line line = new() { X1 = start.X, Y1 = start.Y, X2 = end.X, Y2 = end.Y, Stroke = new SolidColorBrush(Color.FromRgb(75, 105, 115)), StrokeThickness = 2 };
+        Panel.SetZIndex(line, 0);
         canvas.Children.Add(line);
 
-        TextBlock weightLabel = new()
+        TextBlock weightLabel = new() { Text = weight.ToString("0.##"), Foreground = Brushes.White, Background = new SolidColorBrush(Color.FromRgb(32, 40, 45)), FontSize = 11, FontWeight = FontWeights.Bold, Padding = new Thickness(5, 2, 5, 2) };
+        weightLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Size size = weightLabel.DesiredSize;
+
+        double midX = (start.X + end.X) / 2;
+        double midY = (start.Y + end.Y) / 2;
+        double left = midX - (size.Width / 2) - 2;
+        double top = midY - (size.Height / 2) - 8;
+
+        // Check if this label overlaps ANY node
+        bool overlapsNode = allNodes.Any(pos =>
+            Math.Abs(pos.X - (left + size.Width / 2)) < 35 &&
+            Math.Abs(pos.Y - (top + size.Height / 2)) < 35);
+
+        // If it overlaps, slide it 60 pixels along the line away from the midpoint
+        if (overlapsNode)
         {
-            Text = weight.ToString("0.##"),
-            Foreground = Brushes.White,
-            Background = new SolidColorBrush(
-                Color.FromRgb(32, 40, 45)),
-            FontSize = 11,
-            FontWeight = FontWeights.Bold,
-            Padding = new Thickness(5, 2, 5, 2)
-        };
+            double dx = end.X - start.X;
+            double dy = end.Y - start.Y;
+            double len = Math.Sqrt(dx * dx + dy * dy);
+            if (len > 0)
+            {
+                left += (dx / len) * 77;
+                top += (dy / len) * 77;
+            }
+        }
 
-        Canvas.SetLeft(
-            weightLabel,
-            (start.X + end.X) / 2 - 10);
-
-        Canvas.SetTop(
-            weightLabel,
-            (start.Y + end.Y) / 2 - 12);
-
+        Canvas.SetLeft(weightLabel, left);
+        Canvas.SetTop(weightLabel, top);
+        Panel.SetZIndex(weightLabel, 999);
         canvas.Children.Add(weightLabel);
     }
 
@@ -314,7 +329,7 @@ public class NetworkTopologyRenderer
         };
 
         Canvas.SetLeft(label, position.X - 65);
-        Canvas.SetTop(label, position.Y + 29);
+        Canvas.SetTop(label, position.Y + 23);
         canvas.Children.Add(label);
     }
 }
